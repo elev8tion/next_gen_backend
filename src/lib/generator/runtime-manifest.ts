@@ -6,6 +6,11 @@ import type {
   RuntimeManifest,
 } from "./types";
 
+const ACTION_TYPES_SUPPORTED = [
+  "event.emit", "webhook.call", "db.insert", "db.update",
+  "workflow.start", "workflow.transition", "ai.run", "notification.send",
+];
+
 export class RuntimeManifestGenerator {
   generate(manifest: ResolvedManifest): RuntimeManifest {
     // Event catalog: all events from resolved manifest
@@ -66,6 +71,12 @@ export class RuntimeManifestGenerator {
           workflowSubscriptions.push(entity.table);
         }
       }
+      // Also include workflow trigger event names from entity events
+      for (const evt of manifest.events) {
+        if (evt.name.startsWith("workflow.") || evt.trigger === "workflow") {
+          workflowSubscriptions.push(evt.name);
+        }
+      }
     }
 
     // Rule triggers: check for automation.rules module
@@ -92,8 +103,9 @@ export class RuntimeManifestGenerator {
       event_catalog: eventCatalog,
       ai_capability_registry: aiRegistry,
       attach_points_map: attachPointsMap,
-      workflow_subscriptions: workflowSubscriptions,
+      workflow_subscriptions: [...new Set(workflowSubscriptions)],
       rule_triggers: [...new Set(ruleTriggers)],
+      action_types_supported: ACTION_TYPES_SUPPORTED,
     };
   }
 }

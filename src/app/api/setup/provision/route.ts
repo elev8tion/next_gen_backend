@@ -33,6 +33,17 @@ const TABLES = [
   "ai_runs",
   // Webhooks
   "inbound_webhooks",
+  // Workflows
+  "workflows",
+  "workflow_states",
+  "workflow_transitions",
+  "workflow_instances",
+  "workflow_triggers",
+  "workflow_actions",
+  // Notifications
+  "notifications",
+  // Telemetry
+  "automation_action_logs",
 ];
 
 async function ncbFetch(

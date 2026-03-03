@@ -196,6 +196,7 @@ export interface RuntimeManifest {
   attach_points_map: Record<string, AttachPointDef[]>;
   workflow_subscriptions: string[];
   rule_triggers: string[];
+  action_types_supported: string[];
 }
 
 // ── Build Artifact ──

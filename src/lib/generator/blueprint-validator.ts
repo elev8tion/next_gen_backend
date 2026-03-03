@@ -1,10 +1,15 @@
-import type { BlueprintModule, EntityDef, FieldDef } from "./types";
+import type { BlueprintModule, EntityDef, EventDef, FieldDef } from "./types";
 
 export interface BlueprintValidationResult {
   ok: boolean;
   errors: string[];
   warnings: string[];
 }
+
+const VALID_ACTION_TYPES = new Set([
+  "event.emit", "webhook.call", "db.insert", "db.update",
+  "workflow.start", "workflow.transition", "ai.run", "notification.send",
+]);
 
 const VALID_FIELD_TYPES = new Set([
   "uuid", "text", "varchar", "int", "integer", "bigint", "smallint",
@@ -123,6 +128,15 @@ export function validateBlueprint(bp: BlueprintModule): BlueprintValidationResul
       // Check from entity exists (if same module)
       if (rel.from?.entity && !rel.from?.module_key && !entityNames.has(rel.from.entity)) {
         errors.push(`Relationship "${rel.name}": from entity "${rel.from.entity}" not found in this module`);
+      }
+    }
+  }
+
+  // Events — warn on unrecognized action types
+  if (bp.events) {
+    for (const evt of bp.events) {
+      if (evt.trigger && evt.trigger.includes(".") && !VALID_ACTION_TYPES.has(evt.trigger)) {
+        warnings.push(`Event "${evt.name}": trigger "${evt.trigger}" is not a recognized action type`);
       }
     }
   }
