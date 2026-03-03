@@ -44,7 +44,7 @@ export default function ModuleBrowser() {
         if (!res.ok) throw new Error(res.status === 401 ? "Please sign in" : "Failed to load modules");
         return res.json();
       })
-      .then(setModules)
+      .then((data) => setModules(Array.isArray(data) ? data : []))
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
@@ -61,7 +61,7 @@ export default function ModuleBrowser() {
       const res = await fetch(`/api/generator/modules/${moduleKey}/versions`, { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
-        setVersionDetail(data);
+        setVersionDetail(Array.isArray(data) ? data : []);
       }
     } catch {
       // Silently fail
@@ -88,7 +88,10 @@ export default function ModuleBrowser() {
       setCreateForm({ module_key: "", name: "", layer: "domain", description: "" });
       // Refresh
       const modsRes = await fetch("/api/generator/modules", { credentials: "include" });
-      if (modsRes.ok) setModules(await modsRes.json());
+      if (modsRes.ok) {
+        const refreshed = await modsRes.json();
+        setModules(Array.isArray(refreshed) ? refreshed : []);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Create failed");
     } finally {
