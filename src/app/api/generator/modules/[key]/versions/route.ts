@@ -23,7 +23,8 @@ export async function GET(
   });
 
   const data = await res.json();
-  return NextResponse.json(data);
+  const versions = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : Array.isArray(data?.rows) ? data.rows : [];
+  return NextResponse.json(versions);
 }
 
 export async function POST(

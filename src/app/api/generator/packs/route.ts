@@ -26,10 +26,8 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const packs = await packsRes.json();
-  if (!Array.isArray(packs)) {
-    return NextResponse.json([], { status: 200 });
-  }
+  const packsRaw = await packsRes.json();
+  const packs = Array.isArray(packsRaw) ? packsRaw : Array.isArray(packsRaw?.data) ? packsRaw.data : Array.isArray(packsRaw?.rows) ? packsRaw.rows : [];
 
   // Fetch module counts per pack
   const modulesUrl = `${CONFIG.dataApiUrl}/read/pack_modules?Instance=${CONFIG.instance}`;
@@ -41,13 +39,12 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  const allModules = modulesRes.ok ? await modulesRes.json() : [];
+  const allModulesRaw = modulesRes.ok ? await modulesRes.json() : [];
+  const allModules = Array.isArray(allModulesRaw) ? allModulesRaw : Array.isArray(allModulesRaw?.data) ? allModulesRaw.data : Array.isArray(allModulesRaw?.rows) ? allModulesRaw.rows : [];
 
   // Attach module count to each pack
   const result = packs.map((pack: { id: string; pack_key: string; name: string; description?: string }) => {
-    const moduleCount = Array.isArray(allModules)
-      ? (allModules as { pack_id: string }[]).filter((m) => m.pack_id === pack.id).length
-      : 0;
+    const moduleCount = (allModules as { pack_id: string }[]).filter((m) => m.pack_id === pack.id).length;
     return { ...pack, module_count: moduleCount };
   });
 

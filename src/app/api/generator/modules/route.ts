@@ -19,7 +19,8 @@ export async function GET(req: NextRequest) {
   });
 
   const data = await res.json();
-  return NextResponse.json(data);
+  const modules = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : Array.isArray(data?.rows) ? data.rows : [];
+  return NextResponse.json(modules);
 }
 
 export async function POST(req: NextRequest) {
