@@ -1,0 +1,5413 @@
+{
+  "modules": [
+    {
+      "module_key": "ai.agents",
+      "name": "AI Agents",
+      "layer": "domain",
+      "description": "Agent registry, tool registry, agent memory links, task queue/execution records. Designed for MCP tool calling.",
+      "blueprint_json": {
+        "module": {
+          "key": "ai.agents",
+          "name": "AI Agents",
+          "version": "1.0.0",
+          "description": "Agent registry, tool registry, agent memory links, task queue/execution records. Designed for MCP tool calling."
+        },
+        "dependencies": [
+          {
+            "module_key": "ai.core",
+            "version_range": "^1.0.0"
+          },
+          {
+            "module_key": "core.events",
+            "version_range": "^1.0.0",
+            "optional": true
+          },
+          {
+            "module_key": "core.identity",
+            "version_range": "^1.0.0",
+            "optional": true
+          }
+        ],
+        "config": {
+          "options": {
+            "multi_tenant": {
+              "type": "boolean",
+              "default": true
+            },
+            "agent_task_max_attempts": {
+              "type": "int",
+              "default": 5
+            },
+            "memory_enabled": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "entities": [
+          {
+            "name": "tool",
+            "table": "ai_tools",
+            "description": "Callable tools. For MCP, these map to MCP tool definitions.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "key",
+                "type": "varchar(200)",
+                "nullable": false,
+                "unique": true
+              },
+              {
+                "name": "name",
+                "type": "varchar(200)",
+                "nullable": false
+              },
+              {
+                "name": "description",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "schema_json",
+                "type": "jsonb",
+                "nullable": true,
+                "description": "JSON schema / OpenAPI-ish args schema."
+              },
+              {
+                "name": "executor_type",
+                "type": "varchar(60)",
+                "nullable": false,
+                "default": "'mcp'"
+              },
+              {
+                "name": "config_json",
+                "type": "jsonb",
+                "nullable": true
+              }
+            ]
+          },
+          {
+            "name": "agent",
+            "table": "ai_agents",
+            "description": "Agent configuration: instructions, model defaults, safety policy tags, tool access.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": false,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "name": "key",
+                "type": "varchar(200)",
+                "nullable": false
+              },
+              {
+                "name": "name",
+                "type": "varchar(200)",
+                "nullable": false
+              },
+              {
+                "name": "model_default",
+                "type": "varchar(200)",
+                "nullable": false,
+                "default": "'gpt-5'"
+              },
+              {
+                "name": "system_prompt",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "config_json",
+                "type": "jsonb",
+                "nullable": true,
+                "description": "Temperature, max tokens, etc."
+              },
+              {
+                "name": "is_enabled",
+                "type": "boolean",
+                "nullable": false,
+                "default": "true"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "organization_id",
+                  "key"
+                ],
+                "unique": true,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "columns": [
+                  "key"
+                ],
+                "unique": true,
+                "when": "config.multi_tenant == false"
+              }
+            ]
+          },
+          {
+            "name": "agent_tool",
+            "table": "ai_agent_tools",
+            "description": "Tool allowlist per agent.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "agent_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "tool_id",
+                "type": "uuid",
+                "nullable": false
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "agent_id",
+                  "tool_id"
+                ],
+                "unique": true
+              }
+            ]
+          },
+          {
+            "name": "agent_memory_item",
+            "table": "ai_agent_memory_items",
+            "when": "config.memory_enabled == true",
+            "description": "Long-term memory pointers for agents. Store content + optional embedding target link.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "agent_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "memory_type",
+                "type": "varchar(60)",
+                "nullable": false,
+                "default": "'note'"
+              },
+              {
+                "name": "content",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "metadata",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "agent_id"
+                ]
+              }
+            ],
+            "attach_points": [
+              {
+                "name": "ai.semantic_search",
+                "kind": "embedding_target"
+              }
+            ],
+            "ai_capabilities": [
+              {
+                "key": "semantic_search",
+                "requires": [
+                  "ai.core.embedding"
+                ],
+                "embedding": {
+                  "text_fields": [
+                    "content"
+                  ],
+                  "model_default": "text-embedding-3-large"
+                }
+              }
+            ]
+          },
+          {
+            "name": "agent_task",
+            "table": "ai_agent_tasks",
+            "description": "Task queue. Tasks can be created by rules/workflows/events. Worker executes them via tools.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": false,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "name": "agent_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "entity_type",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "entity_id",
+                "type": "uuid",
+                "nullable": true
+              },
+              {
+                "name": "task_type",
+                "type": "varchar(120)",
+                "nullable": false,
+                "default": "'generic'"
+              },
+              {
+                "name": "input_json",
+                "type": "jsonb",
+                "nullable": false
+              },
+              {
+                "name": "status",
+                "type": "varchar(30)",
+                "nullable": false,
+                "default": "'queued'"
+              },
+              {
+                "name": "attempts",
+                "type": "int",
+                "nullable": false,
+                "default": "0"
+              },
+              {
+                "name": "max_attempts",
+                "type": "int",
+                "nullable": false,
+                "default": "config.agent_task_max_attempts"
+              },
+              {
+                "name": "last_error",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              },
+              {
+                "name": "started_at",
+                "type": "timestamptz",
+                "nullable": true
+              },
+              {
+                "name": "finished_at",
+                "type": "timestamptz",
+                "nullable": true
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "status",
+                  "created_at"
+                ]
+              },
+              {
+                "columns": [
+                  "agent_id"
+                ]
+              },
+              {
+                "columns": [
+                  "entity_type",
+                  "entity_id"
+                ]
+              }
+            ],
+            "events": [
+              {
+                "name": "ai.agent_task.created",
+                "emit_on": "insert"
+              },
+              {
+                "name": "ai.agent_task.completed",
+                "emit_on": "update",
+                "when": "NEW.status IN ('success','failed')"
+              }
+            ]
+          },
+          {
+            "name": "agent_task_step",
+            "table": "ai_agent_task_steps",
+            "description": "Per-tool-call record for the task. Links to ai_runs for consistent observability.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "task_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "tool_id",
+                "type": "uuid",
+                "nullable": true
+              },
+              {
+                "name": "ai_run_id",
+                "type": "uuid",
+                "nullable": true
+              },
+              {
+                "name": "status",
+                "type": "varchar(30)",
+                "nullable": false,
+                "default": "'queued'"
+              },
+              {
+                "name": "input_json",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "output_json",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "error",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "started_at",
+                "type": "timestamptz",
+                "nullable": true
+              },
+              {
+                "name": "finished_at",
+                "type": "timestamptz",
+                "nullable": true
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "task_id"
+                ]
+              },
+              {
+                "columns": [
+                  "ai_run_id"
+                ]
+              },
+              {
+                "columns": [
+                  "status"
+                ]
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "name": "agent_tool.agent",
+            "from": {
+              "entity": "agent_tool",
+              "field": "agent_id"
+            },
+            "to": {
+              "module_key": "ai.agents",
+              "entity": "agent",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "agent_tool.tool",
+            "from": {
+              "entity": "agent_tool",
+              "field": "tool_id"
+            },
+            "to": {
+              "module_key": "ai.agents",
+              "entity": "tool",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "memory.agent",
+            "from": {
+              "entity": "agent_memory_item",
+              "field": "agent_id"
+            },
+            "to": {
+              "module_key": "ai.agents",
+              "entity": "agent",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade",
+            "when": "config.memory_enabled == true"
+          },
+          {
+            "name": "task.agent",
+            "from": {
+              "entity": "agent_task",
+              "field": "agent_id"
+            },
+            "to": {
+              "module_key": "ai.agents",
+              "entity": "agent",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "task_step.task",
+            "from": {
+              "entity": "agent_task_step",
+              "field": "task_id"
+            },
+            "to": {
+              "module_key": "ai.agents",
+              "entity": "agent_task",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "task_step.tool",
+            "from": {
+              "entity": "agent_task_step",
+              "field": "tool_id"
+            },
+            "to": {
+              "module_key": "ai.agents",
+              "entity": "tool",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "set_null"
+          },
+          {
+            "name": "task_step.ai_run",
+            "from": {
+              "entity": "agent_task_step",
+              "field": "ai_run_id"
+            },
+            "to": {
+              "module_key": "ai.core",
+              "entity": "ai_run",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "set_null"
+          }
+        ],
+        "events": [
+          {
+            "name": "ai.agent_task.created",
+            "schema": {
+              "task_id": "uuid",
+              "agent_id": "uuid",
+              "occurred_at": "timestamptz"
+            }
+          },
+          {
+            "name": "ai.agent_task.completed",
+            "schema": {
+              "task_id": "uuid",
+              "status": "text",
+              "occurred_at": "timestamptz"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module_key": "ai.core",
+      "name": "AI Core",
+      "layer": "domain",
+      "description": "AI run tracking, embeddings store, feedback loop, AI suggestions. Designed to attach to any entity via (entity_type, entity_id).",
+      "blueprint_json": {
+        "module": {
+          "key": "ai.core",
+          "name": "AI Core",
+          "version": "1.0.0",
+          "description": "AI run tracking, embeddings store, feedback loop, AI suggestions. Designed to attach to any entity via (entity_type, entity_id)."
+        },
+        "dependencies": [
+          {
+            "module_key": "core.events",
+            "version_range": "^1.0.0",
+            "optional": true
+          }
+        ],
+        "config": {
+          "options": {
+            "embeddings_enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "suggestions_enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "default_embedding_model": {
+              "type": "string",
+              "default": "text-embedding-3-large"
+            },
+            "store_vectors_as": {
+              "type": "string",
+              "default": "bytea",
+              "enum": [
+                "bytea",
+                "pgvector"
+              ]
+            }
+          }
+        },
+        "entities": [
+          {
+            "name": "ai_run",
+            "table": "ai_runs",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "entity_type",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "entity_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "capability_key",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "model",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "input_payload",
+                "type": "jsonb",
+                "nullable": false
+              },
+              {
+                "name": "output_payload",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "status",
+                "type": "varchar(20)",
+                "nullable": false,
+                "default": "'queued'"
+              },
+              {
+                "name": "cost_usd",
+                "type": "numeric(12,6)",
+                "nullable": true
+              },
+              {
+                "name": "latency_ms",
+                "type": "int",
+                "nullable": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "entity_type",
+                  "entity_id"
+                ]
+              },
+              {
+                "columns": [
+                  "capability_key"
+                ]
+              },
+              {
+                "columns": [
+                  "status"
+                ]
+              }
+            ],
+            "events": [
+              {
+                "name": "ai.run.created",
+                "emit_on": "insert"
+              },
+              {
+                "name": "ai.run.completed",
+                "emit_on": "update",
+                "when": "NEW.status IN ('success','error')"
+              }
+            ]
+          },
+          {
+            "name": "ai_feedback",
+            "table": "ai_feedback",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "ai_run_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "rating",
+                "type": "int",
+                "nullable": true
+              },
+              {
+                "name": "correction",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "ai_run_id"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "embedding",
+            "table": "embeddings",
+            "when": "config.embeddings_enabled == true",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "entity_type",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "entity_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "model",
+                "type": "text",
+                "nullable": false,
+                "default": "config.default_embedding_model"
+              },
+              {
+                "name": "vector",
+                "type": "bytea",
+                "nullable": false,
+                "when": "config.store_vectors_as == 'bytea'"
+              },
+              {
+                "name": "vector",
+                "type": "vector",
+                "nullable": false,
+                "when": "config.store_vectors_as == 'pgvector'"
+              },
+              {
+                "name": "metadata",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "entity_type",
+                  "entity_id"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "ai_suggestion",
+            "table": "ai_suggestions",
+            "when": "config.suggestions_enabled == true",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "entity_type",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "entity_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "suggestion_type",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "content",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "confidence",
+                "type": "numeric(5,4)",
+                "nullable": true
+              },
+              {
+                "name": "status",
+                "type": "varchar(20)",
+                "nullable": false,
+                "default": "'open'"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "entity_type",
+                  "entity_id"
+                ]
+              },
+              {
+                "columns": [
+                  "suggestion_type"
+                ]
+              },
+              {
+                "columns": [
+                  "status"
+                ]
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "name": "ai_feedback.ai_run",
+            "from": {
+              "entity": "ai_feedback",
+              "field": "ai_run_id"
+            },
+            "to": {
+              "module_key": "ai.core",
+              "entity": "ai_run",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          }
+        ],
+        "attach_points": [
+          {
+            "name": "ai.embedding_target",
+            "kind": "embedding_target",
+            "description": "Any entity can declare this attach point; the generator uses embeddings(entity_type, entity_id)."
+          }
+        ],
+        "events": [
+          {
+            "name": "ai.run.created",
+            "schema": {
+              "ai_run_id": "uuid",
+              "entity_type": "text",
+              "entity_id": "uuid",
+              "occurred_at": "timestamptz"
+            }
+          },
+          {
+            "name": "ai.run.completed",
+            "schema": {
+              "ai_run_id": "uuid",
+              "status": "text",
+              "occurred_at": "timestamptz"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module_key": "automation.integrations",
+      "name": "Automation Integrations",
+      "layer": "domain",
+      "description": "Integration registry: connectors, credentials, inbound webhooks, outbound HTTP actions (safe templating).",
+      "blueprint_json": {
+        "module": {
+          "key": "automation.integrations",
+          "name": "Automation Integrations",
+          "version": "1.0.0",
+          "description": "Integration registry: connectors, credentials, inbound webhooks, outbound HTTP actions (safe templating)."
+        },
+        "dependencies": [
+          {
+            "module_key": "core.identity",
+            "version_range": "^1.0.0",
+            "optional": true
+          },
+          {
+            "module_key": "core.events",
+            "version_range": "^1.0.0",
+            "optional": true
+          }
+        ],
+        "config": {
+          "options": {
+            "multi_tenant": {
+              "type": "boolean",
+              "default": true
+            },
+            "secrets_encrypted": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "entities": [
+          {
+            "name": "connector",
+            "table": "integration_connectors",
+            "description": "Connector types (Slack, Gmail, Stripe, GitHub).",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "key",
+                "type": "varchar(140)",
+                "nullable": false,
+                "unique": true
+              },
+              {
+                "name": "name",
+                "type": "varchar(200)",
+                "nullable": false
+              },
+              {
+                "name": "capabilities_json",
+                "type": "jsonb",
+                "nullable": true
+              }
+            ]
+          },
+          {
+            "name": "credential",
+            "table": "integration_credentials",
+            "description": "Stored auth material (token, apiKey). Store encrypted blob in secret_json.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": false,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "name": "connector_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "name",
+                "type": "varchar(200)",
+                "nullable": false
+              },
+              {
+                "name": "secret_json",
+                "type": "jsonb",
+                "nullable": false
+              },
+              {
+                "name": "is_enabled",
+                "type": "boolean",
+                "nullable": false,
+                "default": "true"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "organization_id"
+                ],
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "columns": [
+                  "connector_id"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "inbound_webhook",
+            "table": "integration_inbound_webhooks",
+            "description": "Public webhook endpoints that emit events into core.events.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": false,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "name": "name",
+                "type": "varchar(200)",
+                "nullable": false
+              },
+              {
+                "name": "path_key",
+                "type": "varchar(200)",
+                "nullable": false,
+                "unique": true
+              },
+              {
+                "name": "event_name",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "secret",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "is_enabled",
+                "type": "boolean",
+                "nullable": false,
+                "default": "true"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "event_name"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "http_action_template",
+            "table": "integration_http_action_templates",
+            "description": "Reusable outbound HTTP call template used by automation.rules actions.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": false,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "name": "name",
+                "type": "varchar(200)",
+                "nullable": false
+              },
+              {
+                "name": "method",
+                "type": "varchar(10)",
+                "nullable": false,
+                "default": "'POST'"
+              },
+              {
+                "name": "url_template",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "headers_template",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "body_template",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "credential_id",
+                "type": "uuid",
+                "nullable": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "organization_id"
+                ],
+                "when": "config.multi_tenant == true"
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "name": "credential.connector",
+            "from": {
+              "entity": "credential",
+              "field": "connector_id"
+            },
+            "to": {
+              "module_key": "automation.integrations",
+              "entity": "connector",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "restrict"
+          },
+          {
+            "name": "http_action_template.credential",
+            "from": {
+              "entity": "http_action_template",
+              "field": "credential_id"
+            },
+            "to": {
+              "module_key": "automation.integrations",
+              "entity": "credential",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "set_null"
+          }
+        ],
+        "events": [
+          {
+            "name": "integration.webhook.received",
+            "schema": {
+              "webhook_id": "uuid",
+              "occurred_at": "timestamptz"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module_key": "automation.rules",
+      "name": "Automation Rules",
+      "layer": "domain",
+      "description": "Event-driven rules: triggers, conditions, actions, executions. Works with core.events and can call AI via ai.core.",
+      "blueprint_json": {
+        "module": {
+          "key": "automation.rules",
+          "name": "Automation Rules",
+          "version": "1.0.0",
+          "description": "Event-driven rules: triggers, conditions, actions, executions. Works with core.events and can call AI via ai.core."
+        },
+        "dependencies": [
+          {
+            "module_key": "core.events",
+            "version_range": "^1.0.0"
+          },
+          {
+            "module_key": "core.identity",
+            "version_range": "^1.0.0",
+            "optional": true
+          },
+          {
+            "module_key": "ai.core",
+            "version_range": "^1.0.0",
+            "optional": true
+          }
+        ],
+        "config": {
+          "options": {
+            "multi_tenant": {
+              "type": "boolean",
+              "default": true
+            },
+            "max_attempts_default": {
+              "type": "int",
+              "default": 5
+            },
+            "dead_letter_enabled": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "entities": [
+          {
+            "name": "rule",
+            "table": "automation_rules",
+            "description": "High-level automation rule triggered by an event_name.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": false,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "name": "name",
+                "type": "varchar(200)",
+                "nullable": false
+              },
+              {
+                "name": "event_name",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "filter_json",
+                "type": "jsonb",
+                "nullable": true,
+                "description": "Quick prefilter on event payload."
+              },
+              {
+                "name": "is_enabled",
+                "type": "boolean",
+                "nullable": false,
+                "default": "true"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              },
+              {
+                "name": "updated_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "organization_id",
+                  "event_name"
+                ],
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "columns": [
+                  "event_name"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "rule_condition",
+            "table": "automation_rule_conditions",
+            "description": "ANDed conditions evaluated against event payload/context.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "rule_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "condition_type",
+                "type": "varchar(60)",
+                "nullable": false,
+                "default": "'json_logic'"
+              },
+              {
+                "name": "expression_json",
+                "type": "jsonb",
+                "nullable": false
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "rule_id"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "rule_action",
+            "table": "automation_rule_actions",
+            "description": "Ordered actions to execute if conditions pass.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "rule_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "sort_order",
+                "type": "int",
+                "nullable": false,
+                "default": "0"
+              },
+              {
+                "name": "action_type",
+                "type": "varchar(80)",
+                "nullable": false
+              },
+              {
+                "name": "config_json",
+                "type": "jsonb",
+                "nullable": false,
+                "description": "Executor-specific config; may reference event fields with templating."
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "rule_id",
+                  "sort_order"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "rule_execution",
+            "table": "automation_rule_executions",
+            "description": "An instance of a rule run for a specific event.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "rule_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "event_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "status",
+                "type": "varchar(30)",
+                "nullable": false,
+                "default": "'queued'"
+              },
+              {
+                "name": "attempts",
+                "type": "int",
+                "nullable": false,
+                "default": "0"
+              },
+              {
+                "name": "max_attempts",
+                "type": "int",
+                "nullable": false,
+                "default": "config.max_attempts_default"
+              },
+              {
+                "name": "last_error",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "started_at",
+                "type": "timestamptz",
+                "nullable": true
+              },
+              {
+                "name": "finished_at",
+                "type": "timestamptz",
+                "nullable": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "status"
+                ]
+              },
+              {
+                "columns": [
+                  "rule_id"
+                ]
+              },
+              {
+                "columns": [
+                  "event_id"
+                ]
+              }
+            ],
+            "events": [
+              {
+                "name": "automation.rule_execution.created",
+                "emit_on": "insert"
+              },
+              {
+                "name": "automation.rule_execution.completed",
+                "emit_on": "update",
+                "when": "NEW.status IN ('success','failed','dead_letter')"
+              }
+            ]
+          },
+          {
+            "name": "rule_execution_step",
+            "table": "automation_rule_execution_steps",
+            "description": "Per-action execution log for debugging and replay.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "execution_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "rule_action_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "status",
+                "type": "varchar(30)",
+                "nullable": false,
+                "default": "'queued'"
+              },
+              {
+                "name": "input_json",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "output_json",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "error",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "started_at",
+                "type": "timestamptz",
+                "nullable": true
+              },
+              {
+                "name": "finished_at",
+                "type": "timestamptz",
+                "nullable": true
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "execution_id"
+                ]
+              },
+              {
+                "columns": [
+                  "rule_action_id"
+                ]
+              },
+              {
+                "columns": [
+                  "status"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "dead_letter",
+            "table": "automation_dead_letters",
+            "when": "config.dead_letter_enabled == true",
+            "description": "Failed executions after max attempts; keep payload for diagnosis/retry.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "execution_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "payload_json",
+                "type": "jsonb",
+                "nullable": false
+              },
+              {
+                "name": "reason",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "execution_id"
+                ],
+                "unique": true
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "name": "rule_condition.rule",
+            "from": {
+              "entity": "rule_condition",
+              "field": "rule_id"
+            },
+            "to": {
+              "module_key": "automation.rules",
+              "entity": "rule",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "rule_action.rule",
+            "from": {
+              "entity": "rule_action",
+              "field": "rule_id"
+            },
+            "to": {
+              "module_key": "automation.rules",
+              "entity": "rule",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "rule_execution.rule",
+            "from": {
+              "entity": "rule_execution",
+              "field": "rule_id"
+            },
+            "to": {
+              "module_key": "automation.rules",
+              "entity": "rule",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "rule_execution.event",
+            "from": {
+              "entity": "rule_execution",
+              "field": "event_id"
+            },
+            "to": {
+              "module_key": "core.events",
+              "entity": "event",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "rule_execution_step.execution",
+            "from": {
+              "entity": "rule_execution_step",
+              "field": "execution_id"
+            },
+            "to": {
+              "module_key": "automation.rules",
+              "entity": "rule_execution",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "rule_execution_step.rule_action",
+            "from": {
+              "entity": "rule_execution_step",
+              "field": "rule_action_id"
+            },
+            "to": {
+              "module_key": "automation.rules",
+              "entity": "rule_action",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "restrict"
+          },
+          {
+            "name": "dead_letter.execution",
+            "from": {
+              "entity": "dead_letter",
+              "field": "execution_id"
+            },
+            "to": {
+              "module_key": "automation.rules",
+              "entity": "rule_execution",
+              "field": "id"
+            },
+            "cardinality": "one_to_one",
+            "on_delete": "cascade",
+            "when": "config.dead_letter_enabled == true"
+          }
+        ],
+        "events": [
+          {
+            "name": "automation.rule_execution.created",
+            "schema": {
+              "execution_id": "uuid",
+              "rule_id": "uuid",
+              "occurred_at": "timestamptz"
+            }
+          },
+          {
+            "name": "automation.rule_execution.completed",
+            "schema": {
+              "execution_id": "uuid",
+              "status": "text",
+              "occurred_at": "timestamptz"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module_key": "automation.scheduler",
+      "name": "Automation Scheduler",
+      "layer": "domain",
+      "description": "Scheduled jobs (cron/interval) that emit events and/or run actions. Enables time-based automation.",
+      "blueprint_json": {
+        "module": {
+          "key": "automation.scheduler",
+          "name": "Automation Scheduler",
+          "version": "1.0.0",
+          "description": "Scheduled jobs (cron/interval) that emit events and/or run actions. Enables time-based automation."
+        },
+        "dependencies": [
+          {
+            "module_key": "core.events",
+            "version_range": "^1.0.0"
+          }
+        ],
+        "config": {
+          "options": {
+            "multi_tenant": {
+              "type": "boolean",
+              "default": true
+            },
+            "default_timezone": {
+              "type": "string",
+              "default": "UTC"
+            }
+          }
+        },
+        "entities": [
+          {
+            "name": "schedule",
+            "table": "automation_schedules",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": false,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "name": "name",
+                "type": "varchar(200)",
+                "nullable": false
+              },
+              {
+                "name": "schedule_type",
+                "type": "varchar(30)",
+                "nullable": false,
+                "default": "'cron'"
+              },
+              {
+                "name": "cron",
+                "type": "varchar(200)",
+                "nullable": true
+              },
+              {
+                "name": "interval_seconds",
+                "type": "int",
+                "nullable": true
+              },
+              {
+                "name": "timezone",
+                "type": "varchar(60)",
+                "nullable": false,
+                "default": "config.default_timezone"
+              },
+              {
+                "name": "payload_template",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "event_name",
+                "type": "text",
+                "nullable": false,
+                "default": "'scheduler.tick'"
+              },
+              {
+                "name": "is_enabled",
+                "type": "boolean",
+                "nullable": false,
+                "default": "true"
+              },
+              {
+                "name": "next_run_at",
+                "type": "timestamptz",
+                "nullable": true
+              },
+              {
+                "name": "last_run_at",
+                "type": "timestamptz",
+                "nullable": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "is_enabled",
+                  "next_run_at"
+                ]
+              },
+              {
+                "columns": [
+                  "organization_id"
+                ],
+                "when": "config.multi_tenant == true"
+              }
+            ]
+          },
+          {
+            "name": "schedule_run",
+            "table": "automation_schedule_runs",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "schedule_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "status",
+                "type": "varchar(30)",
+                "nullable": false,
+                "default": "'started'"
+              },
+              {
+                "name": "event_id",
+                "type": "uuid",
+                "nullable": true,
+                "description": "If this run emitted an event."
+              },
+              {
+                "name": "started_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              },
+              {
+                "name": "finished_at",
+                "type": "timestamptz",
+                "nullable": true
+              },
+              {
+                "name": "last_error",
+                "type": "text",
+                "nullable": true
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "schedule_id"
+                ]
+              },
+              {
+                "columns": [
+                  "status"
+                ]
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "name": "schedule_run.schedule",
+            "from": {
+              "entity": "schedule_run",
+              "field": "schedule_id"
+            },
+            "to": {
+              "module_key": "automation.scheduler",
+              "entity": "schedule",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "schedule_run.event",
+            "from": {
+              "entity": "schedule_run",
+              "field": "event_id"
+            },
+            "to": {
+              "module_key": "core.events",
+              "entity": "event",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "set_null"
+          }
+        ],
+        "events": [
+          {
+            "name": "scheduler.tick",
+            "schema": {
+              "schedule_id": "uuid",
+              "occurred_at": "timestamptz"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module_key": "automation.workflow",
+      "name": "Automation Workflow",
+      "layer": "domain",
+      "description": "State machine workflows, instances, triggers, and actions. Subscribes to events to drive automation.",
+      "blueprint_json": {
+        "module": {
+          "key": "automation.workflow",
+          "name": "Automation Workflow",
+          "version": "1.0.0",
+          "description": "State machine workflows, instances, triggers, and actions. Subscribes to events to drive automation."
+        },
+        "dependencies": [
+          {
+            "module_key": "core.events",
+            "version_range": "^1.0.0"
+          },
+          {
+            "module_key": "core.identity",
+            "version_range": "^1.0.0",
+            "optional": true
+          },
+          {
+            "module_key": "ai.core",
+            "version_range": "^1.0.0",
+            "optional": true
+          }
+        ],
+        "config": {
+          "options": {
+            "multi_tenant": {
+              "type": "boolean",
+              "default": true
+            },
+            "workflow_assignments_enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "ai_routing_enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "entities": [
+          {
+            "name": "workflow",
+            "table": "workflows",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": false,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "name": "key",
+                "type": "varchar(140)",
+                "nullable": false
+              },
+              {
+                "name": "name",
+                "type": "varchar(200)",
+                "nullable": false
+              },
+              {
+                "name": "description",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "is_enabled",
+                "type": "boolean",
+                "nullable": false,
+                "default": "true"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "organization_id",
+                  "key"
+                ],
+                "unique": true,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "columns": [
+                  "key"
+                ],
+                "unique": true,
+                "when": "config.multi_tenant == false"
+              }
+            ]
+          },
+          {
+            "name": "workflow_state",
+            "table": "workflow_states",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "workflow_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "key",
+                "type": "varchar(140)",
+                "nullable": false
+              },
+              {
+                "name": "name",
+                "type": "varchar(200)",
+                "nullable": false
+              },
+              {
+                "name": "is_terminal",
+                "type": "boolean",
+                "nullable": false,
+                "default": "false"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "workflow_id",
+                  "key"
+                ],
+                "unique": true
+              }
+            ]
+          },
+          {
+            "name": "workflow_transition",
+            "table": "workflow_transitions",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "workflow_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "from_state_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "to_state_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "condition_json",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "workflow_id",
+                  "from_state_id"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "workflow_instance",
+            "table": "workflow_instances",
+            "description": "A workflow applied to an entity (entity_type/entity_id).",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "workflow_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": false,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "name": "entity_type",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "entity_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "current_state_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "status",
+                "type": "varchar(30)",
+                "nullable": false,
+                "default": "'active'"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              },
+              {
+                "name": "updated_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "organization_id",
+                  "entity_type",
+                  "entity_id"
+                ],
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "columns": [
+                  "entity_type",
+                  "entity_id"
+                ]
+              }
+            ],
+            "events": [
+              {
+                "name": "workflow.instance.created",
+                "emit_on": "insert"
+              },
+              {
+                "name": "workflow.instance.state_changed",
+                "emit_on": "update",
+                "when": "NEW.current_state_id <> OLD.current_state_id"
+              }
+            ],
+            "attach_points": [
+              {
+                "name": "comments",
+                "kind": "comment_thread"
+              },
+              {
+                "name": "ai.routing",
+                "kind": "ai_agent_target",
+                "when": "config.ai_routing_enabled == true"
+              }
+            ],
+            "ai_capabilities": [
+              {
+                "key": "intelligent_routing",
+                "requires": [
+                  "ai.core.ai_runs"
+                ],
+                "when": "config.ai_routing_enabled == true",
+                "prompts": [
+                  {
+                    "key": "workflow.route",
+                    "purpose": "Suggest next state / assignee based on context"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "workflow_trigger",
+            "table": "workflow_triggers",
+            "description": "Subscribes a workflow to an event name (e.g., 'order.created').",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "workflow_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "event_name",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "filter_json",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "is_enabled",
+                "type": "boolean",
+                "nullable": false,
+                "default": "true"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "workflow_id",
+                  "event_name"
+                ],
+                "unique": true
+              }
+            ]
+          },
+          {
+            "name": "workflow_action",
+            "table": "workflow_actions",
+            "description": "Actions executed on transition/state entry, including webhooks, DB updates, or AI calls.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "workflow_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "state_id",
+                "type": "uuid",
+                "nullable": true
+              },
+              {
+                "name": "transition_id",
+                "type": "uuid",
+                "nullable": true
+              },
+              {
+                "name": "action_type",
+                "type": "varchar(60)",
+                "nullable": false
+              },
+              {
+                "name": "config_json",
+                "type": "jsonb",
+                "nullable": false
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "workflow_id"
+                ]
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "name": "workflow_state.workflow",
+            "from": {
+              "entity": "workflow_state",
+              "field": "workflow_id"
+            },
+            "to": {
+              "module_key": "automation.workflow",
+              "entity": "workflow",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "workflow_transition.workflow",
+            "from": {
+              "entity": "workflow_transition",
+              "field": "workflow_id"
+            },
+            "to": {
+              "module_key": "automation.workflow",
+              "entity": "workflow",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "workflow_instance.workflow",
+            "from": {
+              "entity": "workflow_instance",
+              "field": "workflow_id"
+            },
+            "to": {
+              "module_key": "automation.workflow",
+              "entity": "workflow",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "workflow_instance.current_state",
+            "from": {
+              "entity": "workflow_instance",
+              "field": "current_state_id"
+            },
+            "to": {
+              "module_key": "automation.workflow",
+              "entity": "workflow_state",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "restrict"
+          },
+          {
+            "name": "workflow_trigger.workflow",
+            "from": {
+              "entity": "workflow_trigger",
+              "field": "workflow_id"
+            },
+            "to": {
+              "module_key": "automation.workflow",
+              "entity": "workflow",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "workflow_action.workflow",
+            "from": {
+              "entity": "workflow_action",
+              "field": "workflow_id"
+            },
+            "to": {
+              "module_key": "automation.workflow",
+              "entity": "workflow",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          }
+        ],
+        "events": [
+          {
+            "name": "workflow.instance.created",
+            "schema": {
+              "workflow_instance_id": "uuid",
+              "occurred_at": "timestamptz"
+            }
+          },
+          {
+            "name": "workflow.instance.state_changed",
+            "schema": {
+              "workflow_instance_id": "uuid",
+              "from_state_id": "uuid",
+              "to_state_id": "uuid",
+              "occurred_at": "timestamptz"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module_key": "core.attachments",
+      "name": "Core Attachments",
+      "layer": "domain",
+      "description": "Polymorphic file attachment system attachable to any entity via (entity_type, entity_id).",
+      "blueprint_json": {
+        "module": {
+          "key": "core.attachments",
+          "name": "Core Attachments",
+          "version": "1.0.0",
+          "description": "Polymorphic file attachment system attachable to any entity via (entity_type, entity_id)."
+        },
+        "dependencies": [],
+        "config": {
+          "options": {
+            "file_versioning_enabled": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "entities": [
+          {
+            "name": "file",
+            "table": "files",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "storage_key",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "filename",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "mime_type",
+                "type": "varchar(200)",
+                "nullable": true
+              },
+              {
+                "name": "size_bytes",
+                "type": "bigint",
+                "nullable": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ]
+          },
+          {
+            "name": "entity_file",
+            "table": "entity_files",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "entity_type",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "entity_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "file_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "entity_type",
+                  "entity_id"
+                ]
+              },
+              {
+                "columns": [
+                  "file_id"
+                ]
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "name": "entity_file.file",
+            "from": {
+              "entity": "entity_file",
+              "field": "file_id"
+            },
+            "to": {
+              "module_key": "core.attachments",
+              "entity": "file",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          }
+        ],
+        "attach_points": [
+          {
+            "name": "files",
+            "kind": "attachment"
+          }
+        ],
+        "events": [
+          {
+            "name": "file.uploaded",
+            "schema": {
+              "file_id": "uuid",
+              "occurred_at": "timestamptz"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module_key": "core.audit",
+      "name": "Core Audit",
+      "layer": "domain",
+      "description": "Entity change log and activity tracking.",
+      "blueprint_json": {
+        "module": {
+          "key": "core.audit",
+          "name": "Core Audit",
+          "version": "1.0.0",
+          "description": "Entity change log and activity tracking."
+        },
+        "dependencies": [],
+        "config": {
+          "options": {
+            "store_diff": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "entities": [
+          {
+            "name": "activity_log",
+            "table": "activity_logs",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "entity_type",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "entity_id",
+                "type": "uuid",
+                "nullable": true
+              },
+              {
+                "name": "actor_id",
+                "type": "uuid",
+                "nullable": true
+              },
+              {
+                "name": "action",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "metadata",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "default": "now()",
+                "nullable": false
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "entity_type",
+                  "entity_id"
+                ]
+              },
+              {
+                "columns": [
+                  "actor_id"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "entity_change",
+            "table": "entity_changes",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "entity_type",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "entity_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "change_type",
+                "type": "varchar(20)",
+                "nullable": false
+              },
+              {
+                "name": "diff_json",
+                "type": "jsonb",
+                "nullable": true,
+                "when": "config.store_diff == true"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "default": "now()",
+                "nullable": false
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "entity_type",
+                  "entity_id"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "module_key": "core.comments",
+      "name": "Core Comments",
+      "layer": "domain",
+      "description": "Polymorphic comment threads attachable to any entity.",
+      "blueprint_json": {
+        "module": {
+          "key": "core.comments",
+          "name": "Core Comments",
+          "version": "1.0.0",
+          "description": "Polymorphic comment threads attachable to any entity."
+        },
+        "dependencies": [
+          {
+            "module_key": "core.identity",
+            "version_range": "^1.0.0",
+            "optional": true
+          }
+        ],
+        "config": {
+          "options": {}
+        },
+        "entities": [
+          {
+            "name": "comment_thread",
+            "table": "comment_threads",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "entity_type",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "entity_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "default": "now()",
+                "nullable": false
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "entity_type",
+                  "entity_id"
+                ],
+                "unique": true
+              }
+            ]
+          },
+          {
+            "name": "comment",
+            "table": "comments",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "thread_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "author_id",
+                "type": "uuid",
+                "nullable": true
+              },
+              {
+                "name": "body",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "default": "now()",
+                "nullable": false
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "thread_id"
+                ]
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "name": "comment.thread",
+            "from": {
+              "entity": "comment",
+              "field": "thread_id"
+            },
+            "to": {
+              "module_key": "core.comments",
+              "entity": "comment_thread",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          }
+        ],
+        "attach_points": [
+          {
+            "name": "comments",
+            "kind": "comment_thread"
+          }
+        ]
+      }
+    },
+    {
+      "module_key": "core.custom_fields",
+      "name": "Core Custom Fields",
+      "layer": "domain",
+      "description": "Dynamic custom fields for any entity (no-code flexibility).",
+      "blueprint_json": {
+        "module": {
+          "key": "core.custom_fields",
+          "name": "Core Custom Fields",
+          "version": "1.0.0",
+          "description": "Dynamic custom fields for any entity (no-code flexibility)."
+        },
+        "dependencies": [],
+        "config": {
+          "options": {}
+        },
+        "entities": [
+          {
+            "name": "custom_field_definition",
+            "table": "custom_field_definitions",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "entity_type",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "field_key",
+                "type": "varchar(140)",
+                "nullable": false
+              },
+              {
+                "name": "field_type",
+                "type": "varchar(50)",
+                "nullable": false
+              },
+              {
+                "name": "config_json",
+                "type": "jsonb",
+                "nullable": true
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "entity_type",
+                  "field_key"
+                ],
+                "unique": true
+              }
+            ]
+          },
+          {
+            "name": "custom_field_value",
+            "table": "custom_field_values",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "entity_type",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "entity_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "field_definition_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "value_json",
+                "type": "jsonb",
+                "nullable": true
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "entity_type",
+                  "entity_id"
+                ]
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "name": "custom_field_value.definition",
+            "from": {
+              "entity": "custom_field_value",
+              "field": "field_definition_id"
+            },
+            "to": {
+              "module_key": "core.custom_fields",
+              "entity": "custom_field_definition",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          }
+        ]
+      }
+    },
+    {
+      "module_key": "core.events",
+      "name": "Core Events",
+      "layer": "domain",
+      "description": "Event bus tables for automation, AI triggers, and audit-friendly integration.",
+      "blueprint_json": {
+        "module": {
+          "key": "core.events",
+          "name": "Core Events",
+          "version": "1.0.0",
+          "description": "Event bus tables for automation, AI triggers, and audit-friendly integration."
+        },
+        "dependencies": [],
+        "config": {
+          "options": {
+            "store_event_entity_refs": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "entities": [
+          {
+            "name": "event",
+            "table": "events",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "event_name",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "entity_type",
+                "type": "text",
+                "nullable": true,
+                "when": "config.store_event_entity_refs == true"
+              },
+              {
+                "name": "entity_id",
+                "type": "uuid",
+                "nullable": true,
+                "when": "config.store_event_entity_refs == true"
+              },
+              {
+                "name": "payload",
+                "type": "jsonb",
+                "nullable": false
+              },
+              {
+                "name": "occurred_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "event_name",
+                  "occurred_at"
+                ]
+              },
+              {
+                "columns": [
+                  "entity_type",
+                  "entity_id"
+                ],
+                "when": "config.store_event_entity_refs == true"
+              }
+            ]
+          },
+          {
+            "name": "event_subscription",
+            "table": "event_subscriptions",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "subscriber_key",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "event_name",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "filter_json",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "is_enabled",
+                "type": "boolean",
+                "nullable": false,
+                "default": "true"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "subscriber_key",
+                  "event_name"
+                ],
+                "unique": true
+              }
+            ]
+          },
+          {
+            "name": "event_delivery",
+            "table": "event_deliveries",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "event_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "subscription_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "status",
+                "type": "varchar(20)",
+                "nullable": false,
+                "default": "'pending'"
+              },
+              {
+                "name": "attempts",
+                "type": "int",
+                "nullable": false,
+                "default": "0"
+              },
+              {
+                "name": "last_error",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "delivered_at",
+                "type": "timestamptz",
+                "nullable": true
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "status"
+                ]
+              },
+              {
+                "columns": [
+                  "event_id"
+                ]
+              },
+              {
+                "columns": [
+                  "subscription_id"
+                ]
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "name": "event_delivery.event",
+            "from": {
+              "entity": "event_delivery",
+              "field": "event_id"
+            },
+            "to": {
+              "module_key": "core.events",
+              "entity": "event",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "event_delivery.subscription",
+            "from": {
+              "entity": "event_delivery",
+              "field": "subscription_id"
+            },
+            "to": {
+              "module_key": "core.events",
+              "entity": "event_subscription",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          }
+        ],
+        "events": []
+      }
+    },
+    {
+      "module_key": "core.identity",
+      "name": "Core Identity",
+      "layer": "domain",
+      "description": "Users, organizations, memberships, RBAC. Multi-tenant friendly.",
+      "blueprint_json": {
+        "module": {
+          "key": "core.identity",
+          "name": "Core Identity",
+          "version": "1.0.0",
+          "description": "Users, organizations, memberships, RBAC. Multi-tenant friendly."
+        },
+        "dependencies": [],
+        "config": {
+          "options": {
+            "multi_tenant": {
+              "type": "boolean",
+              "default": true
+            },
+            "rbac_enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "email_login_enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "soft_delete": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "entities": [
+          {
+            "name": "user",
+            "table": "users",
+            "description": "Human user account.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "email",
+                "type": "varchar(320)",
+                "nullable": false,
+                "unique": true,
+                "when": "config.email_login_enabled == true"
+              },
+              {
+                "name": "display_name",
+                "type": "varchar(120)",
+                "nullable": true
+              },
+              {
+                "name": "status",
+                "type": "varchar(30)",
+                "nullable": false,
+                "default": "'active'"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              },
+              {
+                "name": "updated_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              },
+              {
+                "name": "deleted_at",
+                "type": "timestamptz",
+                "nullable": true,
+                "when": "config.soft_delete == true"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "status"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "organization",
+            "table": "organizations",
+            "description": "Tenant / workspace. Optional if you run single-tenant apps.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "name",
+                "type": "varchar(200)",
+                "nullable": false
+              },
+              {
+                "name": "slug",
+                "type": "varchar(200)",
+                "nullable": true,
+                "unique": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              },
+              {
+                "name": "updated_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              },
+              {
+                "name": "deleted_at",
+                "type": "timestamptz",
+                "nullable": true,
+                "when": "config.soft_delete == true"
+              }
+            ],
+            "when": "config.multi_tenant == true"
+          },
+          {
+            "name": "membership",
+            "table": "organization_memberships",
+            "description": "Links users to organizations with a membership status.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "user_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "member_role",
+                "type": "varchar(60)",
+                "nullable": false,
+                "default": "'member'"
+              },
+              {
+                "name": "status",
+                "type": "varchar(30)",
+                "nullable": false,
+                "default": "'active'"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "organization_id"
+                ]
+              },
+              {
+                "columns": [
+                  "user_id"
+                ]
+              },
+              {
+                "columns": [
+                  "organization_id",
+                  "user_id"
+                ],
+                "unique": true
+              }
+            ],
+            "when": "config.multi_tenant == true"
+          },
+          {
+            "name": "role",
+            "table": "roles",
+            "description": "Named role (RBAC). Scope can be org-wide or global depending on multi_tenant.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": true,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "name": "key",
+                "type": "varchar(100)",
+                "nullable": false
+              },
+              {
+                "name": "name",
+                "type": "varchar(140)",
+                "nullable": false
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "organization_id",
+                  "key"
+                ],
+                "unique": true,
+                "when": "config.multi_tenant == true"
+              }
+            ],
+            "when": "config.rbac_enabled == true"
+          },
+          {
+            "name": "permission",
+            "table": "permissions",
+            "description": "Atomic permission key (RBAC).",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "key",
+                "type": "varchar(140)",
+                "nullable": false,
+                "unique": true
+              },
+              {
+                "name": "description",
+                "type": "text",
+                "nullable": true
+              }
+            ],
+            "when": "config.rbac_enabled == true"
+          },
+          {
+            "name": "role_permission",
+            "table": "role_permissions",
+            "description": "Join table for role -> permission.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "role_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "permission_id",
+                "type": "uuid",
+                "nullable": false
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "role_id",
+                  "permission_id"
+                ],
+                "unique": true
+              }
+            ],
+            "when": "config.rbac_enabled == true"
+          },
+          {
+            "name": "user_role",
+            "table": "user_roles",
+            "description": "Assign role to a user (optionally scoped to org).",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": true,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "name": "user_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "role_id",
+                "type": "uuid",
+                "nullable": false
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "organization_id",
+                  "user_id",
+                  "role_id"
+                ],
+                "unique": true,
+                "when": "config.multi_tenant == true"
+              }
+            ],
+            "when": "config.rbac_enabled == true"
+          }
+        ],
+        "relationships": [
+          {
+            "name": "membership.organization",
+            "from": {
+              "entity": "membership",
+              "field": "organization_id"
+            },
+            "to": {
+              "module_key": "core.identity",
+              "entity": "organization",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade",
+            "when": "config.multi_tenant == true"
+          },
+          {
+            "name": "membership.user",
+            "from": {
+              "entity": "membership",
+              "field": "user_id"
+            },
+            "to": {
+              "module_key": "core.identity",
+              "entity": "user",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade",
+            "when": "config.multi_tenant == true"
+          },
+          {
+            "name": "role_permission.role",
+            "from": {
+              "entity": "role_permission",
+              "field": "role_id"
+            },
+            "to": {
+              "module_key": "core.identity",
+              "entity": "role",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade",
+            "when": "config.rbac_enabled == true"
+          },
+          {
+            "name": "role_permission.permission",
+            "from": {
+              "entity": "role_permission",
+              "field": "permission_id"
+            },
+            "to": {
+              "module_key": "core.identity",
+              "entity": "permission",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade",
+            "when": "config.rbac_enabled == true"
+          },
+          {
+            "name": "user_role.user",
+            "from": {
+              "entity": "user_role",
+              "field": "user_id"
+            },
+            "to": {
+              "module_key": "core.identity",
+              "entity": "user",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade",
+            "when": "config.rbac_enabled == true"
+          },
+          {
+            "name": "user_role.role",
+            "from": {
+              "entity": "user_role",
+              "field": "role_id"
+            },
+            "to": {
+              "module_key": "core.identity",
+              "entity": "role",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade",
+            "when": "config.rbac_enabled == true"
+          }
+        ],
+        "events": [
+          {
+            "name": "user.created",
+            "schema": {
+              "user_id": "uuid",
+              "occurred_at": "timestamptz"
+            }
+          },
+          {
+            "name": "organization.created",
+            "schema": {
+              "organization_id": "uuid",
+              "occurred_at": "timestamptz"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module_key": "core.statuses",
+      "name": "Core Statuses",
+      "layer": "domain",
+      "description": "Generic status catalog attachable to any entity.",
+      "blueprint_json": {
+        "module": {
+          "key": "core.statuses",
+          "name": "Core Statuses",
+          "version": "1.0.0",
+          "description": "Generic status catalog attachable to any entity."
+        },
+        "dependencies": [],
+        "config": {
+          "options": {}
+        },
+        "entities": [
+          {
+            "name": "status_definition",
+            "table": "status_definitions",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "entity_type",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "status_key",
+                "type": "varchar(100)",
+                "nullable": false
+              },
+              {
+                "name": "name",
+                "type": "varchar(200)",
+                "nullable": false
+              },
+              {
+                "name": "is_terminal",
+                "type": "boolean",
+                "nullable": false,
+                "default": "false"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "entity_type",
+                  "status_key"
+                ],
+                "unique": true
+              }
+            ]
+          }
+        ],
+        "attach_points": [
+          {
+            "name": "status",
+            "kind": "status_catalog"
+          }
+        ]
+      }
+    },
+    {
+      "module_key": "core.tags",
+      "name": "Core Tags",
+      "layer": "domain",
+      "description": "Generic tagging system for any entity.",
+      "blueprint_json": {
+        "module": {
+          "key": "core.tags",
+          "name": "Core Tags",
+          "version": "1.0.0",
+          "description": "Generic tagging system for any entity."
+        },
+        "dependencies": [],
+        "config": {
+          "options": {}
+        },
+        "entities": [
+          {
+            "name": "tag",
+            "table": "tags",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "name",
+                "type": "varchar(120)",
+                "nullable": false
+              },
+              {
+                "name": "color",
+                "type": "varchar(20)",
+                "nullable": true
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "name"
+                ],
+                "unique": true
+              }
+            ]
+          },
+          {
+            "name": "entity_tag",
+            "table": "entity_tags",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "entity_type",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "entity_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "tag_id",
+                "type": "uuid",
+                "nullable": false
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "entity_type",
+                  "entity_id"
+                ]
+              },
+              {
+                "columns": [
+                  "entity_type",
+                  "entity_id",
+                  "tag_id"
+                ],
+                "unique": true
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "name": "entity_tag.tag",
+            "from": {
+              "entity": "entity_tag",
+              "field": "tag_id"
+            },
+            "to": {
+              "module_key": "core.tags",
+              "entity": "tag",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          }
+        ]
+      }
+    },
+    {
+      "module_key": "crm.core",
+      "name": "CRM Core",
+      "layer": "domain",
+      "description": "Accounts, contacts, leads, opportunities, activities. Designed for AI-first CRM workflows.",
+      "blueprint_json": {
+        "module": {
+          "key": "crm.core",
+          "name": "CRM Core",
+          "version": "1.0.0",
+          "description": "Accounts, contacts, leads, opportunities, activities. Designed for AI-first CRM workflows."
+        },
+        "dependencies": [
+          {
+            "module_key": "core.identity",
+            "version_range": "^1.0.0"
+          },
+          {
+            "module_key": "core.events",
+            "version_range": "^1.0.0",
+            "optional": true
+          },
+          {
+            "module_key": "ai.core",
+            "version_range": "^1.0.0",
+            "optional": true
+          }
+        ],
+        "config": {
+          "options": {
+            "multi_tenant": {
+              "type": "boolean",
+              "default": true
+            },
+            "lead_scoring_enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "ai_next_best_action_enabled": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "entities": [
+          {
+            "name": "account",
+            "table": "crm_accounts",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": false,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "name": "name",
+                "type": "varchar(200)",
+                "nullable": false
+              },
+              {
+                "name": "industry",
+                "type": "varchar(120)",
+                "nullable": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "default": "now()",
+                "nullable": false
+              }
+            ],
+            "events": [
+              {
+                "name": "crm.account.created",
+                "emit_on": "insert"
+              }
+            ],
+            "attach_points": [
+              {
+                "name": "comments",
+                "kind": "comment_thread"
+              },
+              {
+                "name": "files",
+                "kind": "attachment"
+              }
+            ]
+          },
+          {
+            "name": "contact",
+            "table": "crm_contacts",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "account_id",
+                "type": "uuid",
+                "nullable": true
+              },
+              {
+                "name": "first_name",
+                "type": "varchar(120)",
+                "nullable": false
+              },
+              {
+                "name": "last_name",
+                "type": "varchar(120)",
+                "nullable": false
+              },
+              {
+                "name": "email",
+                "type": "varchar(320)",
+                "nullable": true
+              },
+              {
+                "name": "phone",
+                "type": "varchar(50)",
+                "nullable": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "default": "now()",
+                "nullable": false
+              }
+            ],
+            "attach_points": [
+              {
+                "name": "ai.semantic_search",
+                "kind": "embedding_target"
+              }
+            ]
+          },
+          {
+            "name": "lead",
+            "table": "crm_leads",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "source",
+                "type": "varchar(120)",
+                "nullable": true
+              },
+              {
+                "name": "status",
+                "type": "varchar(50)",
+                "nullable": false,
+                "default": "'new'"
+              },
+              {
+                "name": "score",
+                "type": "numeric(5,2)",
+                "nullable": true,
+                "when": "config.lead_scoring_enabled == true"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "default": "now()",
+                "nullable": false
+              }
+            ],
+            "ai_capabilities": [
+              {
+                "key": "lead_scoring",
+                "requires": [
+                  "ai.core.ai_run"
+                ],
+                "when": "config.lead_scoring_enabled == true"
+              }
+            ],
+            "events": [
+              {
+                "name": "crm.lead.created",
+                "emit_on": "insert"
+              }
+            ]
+          },
+          {
+            "name": "opportunity",
+            "table": "crm_opportunities",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "account_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "value_cents",
+                "type": "int",
+                "nullable": true
+              },
+              {
+                "name": "stage",
+                "type": "varchar(100)",
+                "nullable": false
+              },
+              {
+                "name": "close_date",
+                "type": "date",
+                "nullable": true
+              }
+            ],
+            "events": [
+              {
+                "name": "crm.opportunity.updated",
+                "emit_on": "update"
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "name": "contact.account",
+            "from": {
+              "entity": "contact",
+              "field": "account_id"
+            },
+            "to": {
+              "module_key": "crm.core",
+              "entity": "account",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "set_null"
+          }
+        ]
+      }
+    },
+    {
+      "module_key": "marketplace.core",
+      "name": "Marketplace Core",
+      "layer": "domain",
+      "description": "Listings, orders, order items, payments, reviews. Emits events. Supports AI hooks (semantic search, enrichment, fraud signals).",
+      "blueprint_json": {
+        "module": {
+          "key": "marketplace.core",
+          "name": "Marketplace Core",
+          "version": "1.0.0",
+          "description": "Listings, orders, order items, payments, reviews. Emits events. Supports AI hooks (semantic search, enrichment, fraud signals)."
+        },
+        "dependencies": [
+          {
+            "module_key": "core.identity",
+            "version_range": "^1.0.0"
+          },
+          {
+            "module_key": "core.events",
+            "version_range": "^1.0.0",
+            "optional": true
+          },
+          {
+            "module_key": "ai.core",
+            "version_range": "^1.0.0",
+            "optional": true
+          }
+        ],
+        "config": {
+          "options": {
+            "multi_tenant": {
+              "type": "boolean",
+              "default": true
+            },
+            "soft_delete": {
+              "type": "boolean",
+              "default": true
+            },
+            "currency": {
+              "type": "string",
+              "default": "USD"
+            },
+            "reviews_enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "payments_enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "ai_semantic_search_enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "ai_fraud_scoring_enabled": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        },
+        "entities": [
+          {
+            "name": "listing",
+            "table": "listings",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": false,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "name": "seller_user_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "title",
+                "type": "varchar(200)",
+                "nullable": false
+              },
+              {
+                "name": "description",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "price_cents",
+                "type": "int",
+                "nullable": false
+              },
+              {
+                "name": "currency",
+                "type": "varchar(3)",
+                "nullable": false,
+                "default": "config.currency"
+              },
+              {
+                "name": "status",
+                "type": "varchar(30)",
+                "nullable": false,
+                "default": "'active'"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              },
+              {
+                "name": "updated_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              },
+              {
+                "name": "deleted_at",
+                "type": "timestamptz",
+                "nullable": true,
+                "when": "config.soft_delete == true"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "seller_user_id"
+                ]
+              },
+              {
+                "columns": [
+                  "organization_id"
+                ],
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "columns": [
+                  "status"
+                ]
+              }
+            ],
+            "events": [
+              {
+                "name": "listing.created",
+                "emit_on": "insert"
+              },
+              {
+                "name": "listing.updated",
+                "emit_on": "update"
+              }
+            ],
+            "attach_points": [
+              {
+                "name": "files",
+                "kind": "attachment"
+              },
+              {
+                "name": "comments",
+                "kind": "comment_thread"
+              },
+              {
+                "name": "ai.semantic_search",
+                "kind": "embedding_target",
+                "when": "config.ai_semantic_search_enabled == true"
+              }
+            ],
+            "ai_capabilities": [
+              {
+                "key": "semantic_search",
+                "requires": [
+                  "ai.core.embedding"
+                ],
+                "when": "config.ai_semantic_search_enabled == true",
+                "embedding": {
+                  "text_fields": [
+                    "title",
+                    "description"
+                  ],
+                  "model_default": "text-embedding-3-large"
+                }
+              },
+              {
+                "key": "content_enhancement",
+                "requires": [
+                  "ai.core.ai_run"
+                ],
+                "prompts": [
+                  {
+                    "key": "listing.rewrite",
+                    "purpose": "Rewrite listing description for clarity & conversion"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "order",
+            "table": "orders",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": false,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "name": "buyer_user_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "status",
+                "type": "varchar(30)",
+                "nullable": false,
+                "default": "'pending'"
+              },
+              {
+                "name": "subtotal_cents",
+                "type": "int",
+                "nullable": false,
+                "default": "0"
+              },
+              {
+                "name": "total_cents",
+                "type": "int",
+                "nullable": false,
+                "default": "0"
+              },
+              {
+                "name": "currency",
+                "type": "varchar(3)",
+                "nullable": false,
+                "default": "config.currency"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              },
+              {
+                "name": "updated_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "buyer_user_id"
+                ]
+              },
+              {
+                "columns": [
+                  "organization_id"
+                ],
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "columns": [
+                  "status"
+                ]
+              }
+            ],
+            "events": [
+              {
+                "name": "order.created",
+                "emit_on": "insert"
+              },
+              {
+                "name": "order.updated",
+                "emit_on": "update"
+              }
+            ],
+            "ai_capabilities": [
+              {
+                "key": "fraud_scoring",
+                "requires": [
+                  "ai.core.ai_run"
+                ],
+                "when": "config.ai_fraud_scoring_enabled == true",
+                "prompts": [
+                  {
+                    "key": "order.fraud_score",
+                    "purpose": "Return fraud risk score and reasons"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "order_item",
+            "table": "order_items",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "order_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "listing_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "quantity",
+                "type": "int",
+                "nullable": false,
+                "default": "1"
+              },
+              {
+                "name": "unit_price_cents",
+                "type": "int",
+                "nullable": false
+              },
+              {
+                "name": "line_total_cents",
+                "type": "int",
+                "nullable": false
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "order_id"
+                ]
+              },
+              {
+                "columns": [
+                  "listing_id"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "payment",
+            "table": "payments",
+            "when": "config.payments_enabled == true",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "order_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "provider",
+                "type": "varchar(60)",
+                "nullable": false,
+                "default": "'stripe'"
+              },
+              {
+                "name": "provider_payment_id",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "amount_cents",
+                "type": "int",
+                "nullable": false
+              },
+              {
+                "name": "currency",
+                "type": "varchar(3)",
+                "nullable": false,
+                "default": "config.currency"
+              },
+              {
+                "name": "status",
+                "type": "varchar(30)",
+                "nullable": false,
+                "default": "'initiated'"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "order_id"
+                ]
+              },
+              {
+                "columns": [
+                  "status"
+                ]
+              }
+            ],
+            "events": [
+              {
+                "name": "payment.created",
+                "emit_on": "insert"
+              },
+              {
+                "name": "payment.updated",
+                "emit_on": "update"
+              }
+            ]
+          },
+          {
+            "name": "review",
+            "table": "reviews",
+            "when": "config.reviews_enabled == true",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "listing_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "author_user_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "rating",
+                "type": "int",
+                "nullable": false
+              },
+              {
+                "name": "body",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "listing_id"
+                ]
+              },
+              {
+                "columns": [
+                  "author_user_id"
+                ]
+              }
+            ],
+            "events": [
+              {
+                "name": "review.created",
+                "emit_on": "insert"
+              }
+            ],
+            "attach_points": [
+              {
+                "name": "ai.semantic_search",
+                "kind": "embedding_target",
+                "when": "config.ai_semantic_search_enabled == true"
+              }
+            ],
+            "ai_capabilities": [
+              {
+                "key": "semantic_search",
+                "requires": [
+                  "ai.core.embedding"
+                ],
+                "when": "config.ai_semantic_search_enabled == true",
+                "embedding": {
+                  "text_fields": [
+                    "body"
+                  ],
+                  "model_default": "text-embedding-3-large"
+                }
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "name": "listing.seller",
+            "from": {
+              "entity": "listing",
+              "field": "seller_user_id"
+            },
+            "to": {
+              "module_key": "core.identity",
+              "entity": "user",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "restrict"
+          },
+          {
+            "name": "order.buyer",
+            "from": {
+              "entity": "order",
+              "field": "buyer_user_id"
+            },
+            "to": {
+              "module_key": "core.identity",
+              "entity": "user",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "restrict"
+          },
+          {
+            "name": "order_item.order",
+            "from": {
+              "entity": "order_item",
+              "field": "order_id"
+            },
+            "to": {
+              "module_key": "marketplace.core",
+              "entity": "order",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "order_item.listing",
+            "from": {
+              "entity": "order_item",
+              "field": "listing_id"
+            },
+            "to": {
+              "module_key": "marketplace.core",
+              "entity": "listing",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "restrict"
+          },
+          {
+            "name": "payment.order",
+            "from": {
+              "entity": "payment",
+              "field": "order_id"
+            },
+            "to": {
+              "module_key": "marketplace.core",
+              "entity": "order",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade",
+            "when": "config.payments_enabled == true"
+          },
+          {
+            "name": "review.listing",
+            "from": {
+              "entity": "review",
+              "field": "listing_id"
+            },
+            "to": {
+              "module_key": "marketplace.core",
+              "entity": "listing",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade",
+            "when": "config.reviews_enabled == true"
+          },
+          {
+            "name": "review.author",
+            "from": {
+              "entity": "review",
+              "field": "author_user_id"
+            },
+            "to": {
+              "module_key": "core.identity",
+              "entity": "user",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "restrict",
+            "when": "config.reviews_enabled == true"
+          }
+        ],
+        "events": [
+          {
+            "name": "listing.created",
+            "schema": {
+              "listing_id": "uuid",
+              "seller_user_id": "uuid",
+              "occurred_at": "timestamptz"
+            }
+          },
+          {
+            "name": "order.created",
+            "schema": {
+              "order_id": "uuid",
+              "buyer_user_id": "uuid",
+              "occurred_at": "timestamptz"
+            }
+          },
+          {
+            "name": "payment.updated",
+            "schema": {
+              "payment_id": "uuid",
+              "status": "text",
+              "occurred_at": "timestamptz"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "module_key": "saas.core",
+      "name": "SaaS Core",
+      "layer": "domain",
+      "description": "Generic SaaS application scaffolding with projects and resources.",
+      "blueprint_json": {
+        "module": {
+          "key": "saas.core",
+          "name": "SaaS Core",
+          "version": "1.0.0",
+          "description": "Generic SaaS application scaffolding with projects and resources."
+        },
+        "dependencies": [
+          {
+            "module_key": "core.identity",
+            "version_range": "^1.0.0"
+          }
+        ],
+        "config": {
+          "options": {
+            "multi_tenant": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "entities": [
+          {
+            "name": "project",
+            "table": "saas_projects",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": false,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "name": "name",
+                "type": "varchar(200)",
+                "nullable": false
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "default": "now()",
+                "nullable": false
+              }
+            ]
+          },
+          {
+            "name": "resource",
+            "table": "saas_resources",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "project_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "type",
+                "type": "varchar(100)",
+                "nullable": false
+              },
+              {
+                "name": "data_json",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "default": "now()",
+                "nullable": false
+              }
+            ],
+            "attach_points": [
+              {
+                "name": "ai.semantic_search",
+                "kind": "embedding_target"
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "name": "resource.project",
+            "from": {
+              "entity": "resource",
+              "field": "project_id"
+            },
+            "to": {
+              "module_key": "saas.core",
+              "entity": "project",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          }
+        ]
+      }
+    },
+    {
+      "module_key": "ticketing.core",
+      "name": "Ticketing Core",
+      "layer": "domain",
+      "description": "Support tickets with AI triage, routing, and SLA management.",
+      "blueprint_json": {
+        "module": {
+          "key": "ticketing.core",
+          "name": "Ticketing Core",
+          "version": "1.0.0",
+          "description": "Support tickets with AI triage, routing, and SLA management."
+        },
+        "dependencies": [
+          {
+            "module_key": "core.identity",
+            "version_range": "^1.0.0"
+          },
+          {
+            "module_key": "ai.core",
+            "version_range": "^1.0.0",
+            "optional": true
+          },
+          {
+            "module_key": "core.events",
+            "version_range": "^1.0.0",
+            "optional": true
+          }
+        ],
+        "config": {
+          "options": {
+            "multi_tenant": {
+              "type": "boolean",
+              "default": true
+            },
+            "ai_auto_triage_enabled": {
+              "type": "boolean",
+              "default": true
+            }
+          }
+        },
+        "entities": [
+          {
+            "name": "ticket",
+            "table": "tickets",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": false,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "name": "requester_id",
+                "type": "uuid",
+                "nullable": true
+              },
+              {
+                "name": "subject",
+                "type": "varchar(200)",
+                "nullable": false
+              },
+              {
+                "name": "description",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "priority",
+                "type": "varchar(50)",
+                "nullable": false,
+                "default": "'normal'"
+              },
+              {
+                "name": "status",
+                "type": "varchar(50)",
+                "nullable": false,
+                "default": "'open'"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "default": "now()",
+                "nullable": false
+              }
+            ],
+            "attach_points": [
+              {
+                "name": "comments",
+                "kind": "comment_thread"
+              },
+              {
+                "name": "files",
+                "kind": "attachment"
+              },
+              {
+                "name": "ai.semantic_search",
+                "kind": "embedding_target"
+              }
+            ],
+            "ai_capabilities": [
+              {
+                "key": "auto_triage",
+                "requires": [
+                  "ai.core.ai_run"
+                ],
+                "when": "config.ai_auto_triage_enabled == true"
+              }
+            ],
+            "events": [
+              {
+                "name": "ticket.created",
+                "emit_on": "insert"
+              },
+              {
+                "name": "ticket.updated",
+                "emit_on": "update"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "module_key": "internal.ops",
+      "name": "Internal Operations",
+      "layer": "domain",
+      "description": "Internal operations, approvals, and request management.",
+      "blueprint_json": {
+        "module": {
+          "key": "internal.ops",
+          "name": "Internal Operations",
+          "version": "1.0.0",
+          "layer": "domain",
+          "description": "Internal operations, approvals, and request management."
+        },
+        "dependencies": [
+          {
+            "module_key": "core.identity",
+            "version": "^1.0.0"
+          },
+          {
+            "module_key": "core.events",
+            "version": "^1.0.0"
+          }
+        ],
+        "config": {
+          "options": {
+            "multi_tenant": {
+              "type": "boolean",
+              "default": true,
+              "label": "Multi-tenant"
+            },
+            "approval_workflow_enabled": {
+              "type": "boolean",
+              "default": true,
+              "label": "Approval Workflows"
+            }
+          }
+        },
+        "entities": [
+          {
+            "name": "operation_request",
+            "table": "operation_requests",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": false,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "name": "requester_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "request_type",
+                "type": "varchar(100)",
+                "nullable": false
+              },
+              {
+                "name": "title",
+                "type": "varchar(300)",
+                "nullable": false
+              },
+              {
+                "name": "description",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "payload",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "status",
+                "type": "varchar(30)",
+                "nullable": false,
+                "default": "'pending'"
+              },
+              {
+                "name": "priority",
+                "type": "varchar(20)",
+                "nullable": false,
+                "default": "'normal'"
+              },
+              {
+                "name": "approved_by",
+                "type": "uuid",
+                "nullable": true,
+                "when": "config.approval_workflow_enabled == true"
+              },
+              {
+                "name": "approved_at",
+                "type": "timestamptz",
+                "nullable": true,
+                "when": "config.approval_workflow_enabled == true"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              },
+              {
+                "name": "updated_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": [
+                  "requester_id"
+                ]
+              },
+              {
+                "columns": [
+                  "organization_id"
+                ],
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "columns": [
+                  "status"
+                ]
+              },
+              {
+                "columns": [
+                  "request_type"
+                ]
+              }
+            ],
+            "events": [
+              {
+                "name": "operation_request.created",
+                "trigger": "insert"
+              },
+              {
+                "name": "operation_request.updated",
+                "trigger": "update"
+              },
+              {
+                "name": "operation_request.approved",
+                "trigger": "update",
+                "when": "config.approval_workflow_enabled == true"
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "name": "operation_request.requester",
+            "from": {
+              "entity": "operation_request",
+              "field": "requester_id"
+            },
+            "to": {
+              "module_key": "core.identity",
+              "entity": "user",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "restrict"
+          }
+        ]
+      }
+    }
+  ],
+  "packs": [
+    {
+      "pack_key": "marketplace.ai.workflow.v1",
+      "name": "Marketplace + Workflow + AI",
+      "description": "Multi-tenant AI-native marketplace with workflow automation and event-driven architecture.",
+      "modules": [
+        {
+          "module_key": "core.identity",
+          "load_order": 1
+        },
+        {
+          "module_key": "core.events",
+          "load_order": 2
+        },
+        {
+          "module_key": "ai.core",
+          "load_order": 3
+        },
+        {
+          "module_key": "automation.workflow",
+          "load_order": 4
+        },
+        {
+          "module_key": "marketplace.core",
+          "load_order": 5
+        }
+      ],
+      "config": {
+        "multi_tenant": true,
+        "soft_delete": true,
+        "rbac_enabled": true,
+        "email_login_enabled": true,
+        "store_event_entity_refs": true,
+        "embeddings_enabled": true,
+        "suggestions_enabled": true,
+        "default_embedding_model": "text-embedding-3-large",
+        "store_vectors_as": "bytea",
+        "workflow_assignments_enabled": true,
+        "ai_routing_enabled": true,
+        "currency": "USD",
+        "reviews_enabled": true,
+        "payments_enabled": true,
+        "ai_semantic_search_enabled": true,
+        "ai_fraud_scoring_enabled": true
+      }
+    },
+    {
+      "pack_key": "crm.ai_first.v1",
+      "name": "AI-First CRM",
+      "description": "Multi-tenant AI-native CRM with workflow automation, intelligent agents, and event-driven rules.",
+      "modules": [
+        {
+          "module_key": "core.identity",
+          "load_order": 1
+        },
+        {
+          "module_key": "core.events",
+          "load_order": 2
+        },
+        {
+          "module_key": "core.audit",
+          "load_order": 3
+        },
+        {
+          "module_key": "core.tags",
+          "load_order": 4
+        },
+        {
+          "module_key": "core.custom_fields",
+          "load_order": 5
+        },
+        {
+          "module_key": "core.attachments",
+          "load_order": 6
+        },
+        {
+          "module_key": "core.comments",
+          "load_order": 7
+        },
+        {
+          "module_key": "core.statuses",
+          "load_order": 8
+        },
+        {
+          "module_key": "ai.core",
+          "load_order": 9
+        },
+        {
+          "module_key": "ai.agents",
+          "load_order": 10
+        },
+        {
+          "module_key": "automation.workflow",
+          "load_order": 11
+        },
+        {
+          "module_key": "automation.rules",
+          "load_order": 12
+        },
+        {
+          "module_key": "automation.scheduler",
+          "load_order": 13
+        },
+        {
+          "module_key": "automation.integrations",
+          "load_order": 14
+        },
+        {
+          "module_key": "crm.core",
+          "load_order": 15
+        }
+      ],
+      "config": {
+        "multi_tenant": true,
+        "soft_delete": true,
+        "rbac_enabled": true,
+        "store_event_entity_refs": true,
+        "embeddings_enabled": true,
+        "suggestions_enabled": true,
+        "default_embedding_model": "text-embedding-3-large",
+        "lead_scoring_enabled": true,
+        "ai_next_best_action_enabled": true,
+        "ai_routing_enabled": true,
+        "rules_enabled": true,
+        "scheduler_enabled": true,
+        "integrations_enabled": true
+      }
+    },
+    {
+      "pack_key": "ticketing.ai_first.v1",
+      "name": "AI-First Ticketing System",
+      "description": "AI-augmented support system with intelligent triage, routing, SLA automation, and agent assistance.",
+      "modules": [
+        {
+          "module_key": "core.identity",
+          "load_order": 1
+        },
+        {
+          "module_key": "core.events",
+          "load_order": 2
+        },
+        {
+          "module_key": "core.audit",
+          "load_order": 3
+        },
+        {
+          "module_key": "core.tags",
+          "load_order": 4
+        },
+        {
+          "module_key": "core.custom_fields",
+          "load_order": 5
+        },
+        {
+          "module_key": "core.attachments",
+          "load_order": 6
+        },
+        {
+          "module_key": "core.comments",
+          "load_order": 7
+        },
+        {
+          "module_key": "ai.core",
+          "load_order": 8
+        },
+        {
+          "module_key": "ai.agents",
+          "load_order": 9
+        },
+        {
+          "module_key": "automation.workflow",
+          "load_order": 10
+        },
+        {
+          "module_key": "automation.rules",
+          "load_order": 11
+        },
+        {
+          "module_key": "automation.scheduler",
+          "load_order": 12
+        },
+        {
+          "module_key": "automation.integrations",
+          "load_order": 13
+        },
+        {
+          "module_key": "ticketing.core",
+          "load_order": 14
+        }
+      ],
+      "config": {
+        "multi_tenant": true,
+        "rbac_enabled": true,
+        "embeddings_enabled": true,
+        "suggestions_enabled": true,
+        "ai_auto_triage_enabled": true,
+        "ai_priority_prediction_enabled": true,
+        "ai_agent_assist_enabled": true,
+        "ai_routing_enabled": true
+      }
+    },
+    {
+      "pack_key": "internal_automation.intelligent.v1",
+      "name": "Intelligent Internal Automation",
+      "description": "Event-driven automation platform with rules engine, scheduler, integrations, and AI routing.",
+      "modules": [
+        {
+          "module_key": "core.identity",
+          "load_order": 1
+        },
+        {
+          "module_key": "core.events",
+          "load_order": 2
+        },
+        {
+          "module_key": "core.audit",
+          "load_order": 3
+        },
+        {
+          "module_key": "core.custom_fields",
+          "load_order": 4
+        },
+        {
+          "module_key": "core.tags",
+          "load_order": 5
+        },
+        {
+          "module_key": "ai.core",
+          "load_order": 6
+        },
+        {
+          "module_key": "ai.agents",
+          "load_order": 7
+        },
+        {
+          "module_key": "automation.workflow",
+          "load_order": 8
+        },
+        {
+          "module_key": "automation.rules",
+          "load_order": 9
+        },
+        {
+          "module_key": "automation.scheduler",
+          "load_order": 10
+        },
+        {
+          "module_key": "automation.integrations",
+          "load_order": 11
+        },
+        {
+          "module_key": "internal.ops",
+          "load_order": 12
+        }
+      ],
+      "config": {
+        "multi_tenant": true,
+        "rbac_enabled": true,
+        "rules_enabled": true,
+        "scheduler_enabled": true,
+        "integrations_enabled": true,
+        "ai_routing_enabled": true,
+        "ai_anomaly_detection_enabled": true,
+        "ai_document_summarization_enabled": true
+      }
+    },
+    {
+      "pack_key": "saas.ai_augmented.v1",
+      "name": "AI-Augmented SaaS Platform",
+      "description": "Generic multi-tenant SaaS base with AI capabilities, workflow automation, and extensibility.",
+      "modules": [
+        {
+          "module_key": "core.identity",
+          "load_order": 1
+        },
+        {
+          "module_key": "core.events",
+          "load_order": 2
+        },
+        {
+          "module_key": "core.audit",
+          "load_order": 3
+        },
+        {
+          "module_key": "core.tags",
+          "load_order": 4
+        },
+        {
+          "module_key": "core.custom_fields",
+          "load_order": 5
+        },
+        {
+          "module_key": "core.attachments",
+          "load_order": 6
+        },
+        {
+          "module_key": "core.comments",
+          "load_order": 7
+        },
+        {
+          "module_key": "ai.core",
+          "load_order": 8
+        },
+        {
+          "module_key": "ai.agents",
+          "load_order": 9
+        },
+        {
+          "module_key": "automation.workflow",
+          "load_order": 10
+        },
+        {
+          "module_key": "automation.rules",
+          "load_order": 11
+        },
+        {
+          "module_key": "automation.scheduler",
+          "load_order": 12
+        },
+        {
+          "module_key": "automation.integrations",
+          "load_order": 13
+        },
+        {
+          "module_key": "saas.core",
+          "load_order": 14
+        }
+      ],
+      "config": {
+        "multi_tenant": true,
+        "soft_delete": true,
+        "rbac_enabled": true,
+        "embeddings_enabled": true,
+        "suggestions_enabled": true,
+        "ai_assistant_enabled": true,
+        "rules_enabled": true,
+        "scheduler_enabled": true,
+        "integrations_enabled": true
+      }
+    }
+  ]
+}
