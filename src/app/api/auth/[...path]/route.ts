@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const CONFIG = {
   instance: process.env.NCB_INSTANCE!,
   apiUrl: process.env.NCB_AUTH_API_URL!,
+  secretKey: process.env.NCB_SECRET_KEY || "",
 };
 
 export async function GET(
@@ -84,14 +85,19 @@ async function handleSignOut(req: NextRequest) {
     const origin = req.headers.get("origin") || req.nextUrl.origin;
     const authCookies = extractAuthCookies(req.headers.get("cookie") || "");
 
+    const signOutHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+      "X-Database-Instance": CONFIG.instance,
+      Cookie: authCookies,
+      Origin: origin,
+    };
+    if (CONFIG.secretKey) {
+      signOutHeaders["Authorization"] = `Bearer ${CONFIG.secretKey}`;
+    }
+
     const res = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Database-Instance": CONFIG.instance,
-        Cookie: authCookies,
-        Origin: origin,
-      },
+      headers: signOutHeaders,
       body: "{}",
     });
 
@@ -128,14 +134,19 @@ async function proxy(req: NextRequest, path: string, body?: string) {
   const origin = req.headers.get("origin") || req.nextUrl.origin;
   const authCookies = extractAuthCookies(req.headers.get("cookie") || "");
 
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "X-Database-Instance": CONFIG.instance,
+    Cookie: authCookies,
+    Origin: origin,
+  };
+  if (CONFIG.secretKey) {
+    headers["Authorization"] = `Bearer ${CONFIG.secretKey}`;
+  }
+
   const res = await fetch(url, {
     method: req.method,
-    headers: {
-      "Content-Type": "application/json",
-      "X-Database-Instance": CONFIG.instance,
-      Cookie: authCookies,
-      Origin: origin,
-    },
+    headers,
     body: body || undefined,
   });
 

@@ -132,7 +132,7 @@ export default function ModuleBrowser() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Blueprint Modules</h1>
           <p className="mt-1 text-sm text-muted">
-            {modules.length} modules across {sortedLayers.length} layers. Click to expand, or click name to author.
+            {modules.length} modules across {sortedLayers.length} layers. Use <strong>Open Editor</strong> to author blueprint JSON, or ▸ to preview.
           </p>
         </div>
         <button
@@ -227,19 +227,21 @@ export default function ModuleBrowser() {
                   <div className="w-full rounded-lg border border-card-border bg-card p-4 transition-colors hover:border-accent/30">
                     <div className="flex items-center justify-between">
                       <div>
+                        <span className="text-sm font-medium">{mod.name}</span>
+                        <span className="ml-2 text-xs font-mono text-muted">{mod.module_key}</span>
                         <a
                           href={`/modules/${mod.module_key}`}
-                          className="text-sm font-medium hover:text-accent hover:underline"
+                          className="ml-2 rounded border border-accent/20 bg-accent/10 px-2 py-0.5 text-xs font-medium text-accent hover:bg-accent/20"
                         >
-                          {mod.name}
+                          Open Editor
                         </a>
-                        <span className="ml-2 text-xs font-mono text-muted">{mod.module_key}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         {mod.version && <span className="text-xs font-mono text-muted">{mod.version}</span>}
                         <button
                           onClick={() => toggleExpand(mod.module_key)}
                           className="text-muted text-xs hover:text-foreground"
+                          title="Preview blueprint JSON"
                         >
                           {expanded === mod.module_key ? "▾" : "▸"}
                         </button>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { execSync } from "child_process";
 
 export const CONFIG = {
   instance: process.env.NCB_INSTANCE!,
@@ -6,6 +7,21 @@ export const CONFIG = {
   authApiUrl: process.env.NCB_AUTH_API_URL!,
   appUrl: process.env.NCB_APP_URL || "https://app.nocodebackend.com",
 };
+
+// Branch safety: warn if .env.local is stale after a branch switch without restart
+if (process.env.NODE_ENV === "development" && process.env.NCB_EXPECTED_BRANCH) {
+  try {
+    const branch = execSync("git symbolic-ref --short HEAD", { encoding: "utf-8" }).trim();
+    if (branch !== process.env.NCB_EXPECTED_BRANCH) {
+      console.warn(
+        `\n⚠️  [env-switch] Branch mismatch! Git branch is "${branch}" but .env.local expects "${process.env.NCB_EXPECTED_BRANCH}".` +
+        `\n   NCB instance "${CONFIG.instance}" may be wrong. Restart 'npm run dev' after switching branches.\n`
+      );
+    }
+  } catch {
+    // Not in a git repo or git not available — skip check
+  }
+}
 
 /**
  * NCB read endpoints may return a plain array, or a wrapped object like

@@ -71,7 +71,10 @@ export default function ComposerDashboard() {
       <div className="mb-8 flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Visual Composer</h1>
-          <p className="mt-1 text-sm text-muted">Drag-and-drop blueprint composition with live validation.</p>
+          <p className="mt-1 text-sm text-muted">
+            Drag-and-drop blueprint composition with live validation.
+            {" "}Already have a blueprint pack? <a href="/" className="text-accent hover:underline">Use Blueprint Packs</a> for one-click build and deploy.
+          </p>
         </div>
         <button
           onClick={() => setShowCreate(!showCreate)}

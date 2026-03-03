@@ -14,6 +14,14 @@ interface RunAllResult {
   agents?: WorkerResult;
 }
 
+function formatResult(r: WorkerResult) {
+  if (r.error) return { processed: 0, success: 0, failed: 0, error: r.error };
+  const processed = r.processed ?? 0;
+  const success = r.results?.filter((x) => x.success).length ?? 0;
+  const failed = r.results?.filter((x) => !x.success).length ?? 0;
+  return { processed, success, failed, error: null };
+}
+
 export default function WorkersDashboard() {
   const [running, setRunning] = useState<Record<string, boolean>>({});
   const [results, setResults] = useState<Record<string, WorkerResult>>({});
@@ -91,42 +99,59 @@ export default function WorkersDashboard() {
 
       {runAllResult && (
         <div className="mb-6 rounded-lg border border-success/30 bg-success/10 p-4">
-          <h3 className="text-sm font-semibold text-success mb-2">Run All Complete</h3>
-          <pre className="text-xs text-muted overflow-x-auto">
-            {JSON.stringify(runAllResult, null, 2)}
-          </pre>
+          <h3 className="text-sm font-semibold text-success mb-3">Run All Complete</h3>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {(["scheduler", "rules", "agents"] as const).map((key) => {
+              const r = runAllResult[key];
+              if (!r) return null;
+              const f = formatResult(r);
+              const label = key === "scheduler" ? "Scheduler" : key === "rules" ? "Rules Engine" : "Agent Runner";
+              return (
+                <div key={key} className="rounded-md border border-success/20 bg-success/5 p-3">
+                  <p className="text-xs font-medium text-success">{label}</p>
+                  <p className="mt-1 text-xs text-muted">Processed: {f.processed}</p>
+                  <p className="text-xs text-muted">Success: {f.success} / Failed: {f.failed}</p>
+                  {f.error && <p className="mt-1 text-xs text-danger">{f.error}</p>}
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
       <div className="grid gap-4 sm:grid-cols-3">
-        {workers.map((w) => (
-          <div key={w.key} className="rounded-lg border border-card-border bg-card p-5">
-            <h2 className="font-semibold">{w.name}</h2>
-            <p className="mt-1 text-xs text-muted">{w.desc}</p>
-            <p className="mt-2 text-[10px] font-mono text-muted">POST {w.url}</p>
+        {workers.map((w) => {
+          const r = results[w.key];
+          const f = r ? formatResult(r) : null;
+          return (
+            <div key={w.key} className="rounded-lg border border-card-border bg-card p-5">
+              <h2 className="font-semibold">{w.name}</h2>
+              <p className="mt-1 text-xs text-muted">{w.desc}</p>
 
-            <button
-              onClick={() => runWorker(w.key, w.url)}
-              disabled={running[w.key]}
-              className="mt-4 w-full rounded-md bg-accent px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
-            >
-              {running[w.key] ? "Running..." : `Run ${w.name}`}
-            </button>
+              <button
+                onClick={() => runWorker(w.key, w.url)}
+                disabled={running[w.key]}
+                className="mt-4 w-full rounded-md bg-accent px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+              >
+                {running[w.key] ? "Running..." : `Run ${w.name}`}
+              </button>
 
-            {results[w.key] && (
-              <div className="mt-3 rounded border border-card-border bg-background p-3">
-                <pre className="text-[10px] text-muted overflow-x-auto max-h-40">
-                  {JSON.stringify(results[w.key], null, 2)}
-                </pre>
-              </div>
-            )}
-          </div>
-        ))}
+              {f && (
+                <div className="mt-3 rounded border border-card-border bg-background p-3 space-y-1">
+                  <p className="text-xs text-muted">Processed: {f.processed}</p>
+                  <p className="text-xs text-muted">Success: {f.success} / Failed: {f.failed}</p>
+                  {f.error && <p className="text-xs text-danger">{f.error}</p>}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
-      {/* Emit Event Section */}
+      {/* Trigger Event Section */}
       <div className="mt-8">
-        <h2 className="mb-4 text-lg font-semibold">Emit Test Event</h2>
+        <h2 className="mb-2 text-lg font-semibold">Trigger Event</h2>
+        <p className="mb-4 text-xs text-muted">Emit a named event to the rules engine. Matching automation rules will fire immediately.</p>
         <EventEmitter />
       </div>
     </div>
@@ -194,7 +219,7 @@ function EventEmitter() {
         disabled={emitting}
         className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
       >
-        {emitting ? "Emitting..." : "Emit Event"}
+        {emitting ? "Emitting..." : "Trigger Event"}
       </button>
       {result && (
         <pre className="text-xs text-muted bg-background rounded p-3 border border-card-border">
