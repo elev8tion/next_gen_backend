@@ -1,4 +1,4 @@
-import { CONFIG, extractAuthCookies } from "@/lib/ncb-utils";
+import { CONFIG, extractAuthCookies, unwrapNCBArray } from "@/lib/ncb-utils";
 import type {
   BlueprintModule,
   BlueprintVersionRecord,
@@ -8,7 +8,7 @@ import type {
   PackRecord,
 } from "./types";
 
-async function fetchNCB<T>(path: string, cookieHeader: string): Promise<T> {
+async function fetchNCB(path: string, cookieHeader: string): Promise<unknown> {
   const authCookies = extractAuthCookies(cookieHeader);
   const url = `${CONFIG.dataApiUrl}/${path}?Instance=${CONFIG.instance}`;
   const res = await fetch(url, {
@@ -22,26 +22,26 @@ async function fetchNCB<T>(path: string, cookieHeader: string): Promise<T> {
     const text = await res.text();
     throw new Error(`NCB fetch failed (${res.status}): ${text}`);
   }
-  return res.json() as Promise<T>;
+  return res.json();
 }
 
 export class BlueprintLoader {
   async load(packKey: string, cookieHeader: string): Promise<LoaderResult> {
     // 1. Fetch the pack
-    const packs = await fetchNCB<PackRecord[]>(
+    const packs = unwrapNCBArray<PackRecord>(await fetchNCB(
       `read/blueprint_packs?pack_key=eq.${packKey}`,
       cookieHeader
-    );
+    ));
     if (!packs.length) {
       throw new Error(`Pack not found: ${packKey}`);
     }
     const pack = packs[0];
 
     // 2. Fetch pack_modules for this pack
-    const packModules = await fetchNCB<PackModuleRecord[]>(
+    const packModules = unwrapNCBArray<PackModuleRecord>(await fetchNCB(
       `read/pack_modules?pack_id=eq.${pack.id}&order=load_order.asc`,
       cookieHeader
-    );
+    ));
     if (!packModules.length) {
       throw new Error(`No modules found for pack: ${packKey}`);
     }
@@ -50,10 +50,10 @@ export class BlueprintLoader {
     const moduleKeys = packModules.map((pm) => pm.module_key);
     const versionIds = packModules.map((pm) => pm.version_id);
 
-    const versions = await fetchNCB<BlueprintVersionRecord[]>(
+    const versions = unwrapNCBArray<BlueprintVersionRecord>(await fetchNCB(
       `read/blueprint_versions?id=in.(${versionIds.join(",")})`,
       cookieHeader
-    );
+    ));
 
     // Build a map of version_id -> blueprint
     const versionMap = new Map<string, BlueprintVersionRecord>();
@@ -87,10 +87,10 @@ export class BlueprintLoader {
     }
 
     // 5. Fetch pack_config
-    const configs = await fetchNCB<{ id: string; config_json: PackConfig }[]>(
+    const configs = unwrapNCBArray<{ id: string; config_json: PackConfig }>(await fetchNCB(
       `read/pack_config?pack_id=eq.${pack.id}`,
       cookieHeader
-    );
+    ));
     const packConfig: PackConfig = configs.length ? configs[0].config_json : {};
 
     return {

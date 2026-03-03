@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CONFIG, extractAuthCookies, getSessionUser } from "@/lib/ncb-utils";
+import { CONFIG, extractAuthCookies, getSessionUser, unwrapNCBArray } from "@/lib/ncb-utils";
 
 export async function GET(
   req: NextRequest,
@@ -22,8 +22,8 @@ export async function GET(
       Cookie: authCookies,
     },
   });
-  const packs = await packRes.json();
-  if (!Array.isArray(packs) || !packs.length) {
+  const packs = unwrapNCBArray(await packRes.json());
+  if (!packs.length) {
     return NextResponse.json({ error: "Pack not found" }, { status: 404 });
   }
   const pack = packs[0];
@@ -37,7 +37,7 @@ export async function GET(
       Cookie: authCookies,
     },
   });
-  const modules = await modulesRes.json();
+  const modules = unwrapNCBArray(await modulesRes.json());
 
   // Fetch blueprint versions for these modules
   const versionIds = (modules as { version_id: string }[]).map((m) => m.version_id);
@@ -51,7 +51,7 @@ export async function GET(
         Cookie: authCookies,
       },
     });
-    versions = await versionsRes.json();
+    versions = unwrapNCBArray(await versionsRes.json()) as typeof versions;
   }
 
   // Fetch pack config
@@ -63,7 +63,7 @@ export async function GET(
       Cookie: authCookies,
     },
   });
-  const configs = await configRes.json();
+  const configs = unwrapNCBArray(await configRes.json());
 
   const versionMap = new Map(versions.map((v) => [v.id, v]));
   const enrichedModules = (modules as { module_key: string; version_id: string; load_order: number }[]).map((m) => {
@@ -81,7 +81,7 @@ export async function GET(
   return NextResponse.json({
     ...pack,
     modules: enrichedModules,
-    config: Array.isArray(configs) && configs.length ? configs[0].config_json : {},
+    config: configs.length ? (configs[0] as { config_json: Record<string, unknown> }).config_json : {},
   });
 }
 
@@ -108,8 +108,8 @@ export async function PUT(
       Cookie: authCookies,
     },
   });
-  const packs = await packRes.json();
-  if (!Array.isArray(packs) || !packs.length) {
+  const packs = unwrapNCBArray(await packRes.json());
+  if (!packs.length) {
     return NextResponse.json({ error: "Pack not found" }, { status: 404 });
   }
 
@@ -154,8 +154,8 @@ export async function DELETE(
       Cookie: authCookies,
     },
   });
-  const packs = await packRes.json();
-  if (!Array.isArray(packs) || !packs.length) {
+  const packs = unwrapNCBArray(await packRes.json());
+  if (!packs.length) {
     return NextResponse.json({ error: "Pack not found" }, { status: 404 });
   }
 

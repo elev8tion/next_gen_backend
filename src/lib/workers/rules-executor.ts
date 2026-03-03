@@ -1,4 +1,4 @@
-import { CONFIG, extractAuthCookies } from "@/lib/ncb-utils";
+import { CONFIG, extractAuthCookies, unwrapNCBArray } from "@/lib/ncb-utils";
 import { evaluateCondition } from "./json-logic";
 
 interface Event {
@@ -48,24 +48,34 @@ export async function executeRules(
   batchSize = 50
 ): Promise<{ processed: number; results: ExecutionResult[] }> {
   // 1. Read recent unprocessed events (events not yet in rule_executions)
-  const events: Event[] = await ncbFetch(
-    `read/events?order=occurred_at.desc&limit=${batchSize}`,
-    authCookies,
-    origin
-  );
+  let events: Event[];
+  try {
+    events = unwrapNCBArray<Event>(await ncbFetch(
+      `read/events?order=occurred_at.desc&limit=${batchSize}`,
+      authCookies,
+      origin
+    ));
+  } catch {
+    return { processed: 0, results: [] };
+  }
 
-  if (!Array.isArray(events) || events.length === 0) {
+  if (events.length === 0) {
     return { processed: 0, results: [] };
   }
 
   // 2. Read enabled rules
-  const rules: Rule[] = await ncbFetch(
-    "read/automation_rules?is_enabled=eq.true",
-    authCookies,
-    origin
-  );
+  let rules: Rule[];
+  try {
+    rules = unwrapNCBArray<Rule>(await ncbFetch(
+      "read/automation_rules?is_enabled=eq.true",
+      authCookies,
+      origin
+    ));
+  } catch {
+    return { processed: 0, results: [] };
+  }
 
-  if (!Array.isArray(rules) || rules.length === 0) {
+  if (rules.length === 0) {
     return { processed: 0, results: [] };
   }
 

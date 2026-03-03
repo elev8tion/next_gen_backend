@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CONFIG, extractAuthCookies, getSessionUser } from "@/lib/ncb-utils";
+import { CONFIG, extractAuthCookies, getSessionUser, unwrapNCBArray } from "@/lib/ncb-utils";
 
 export async function PUT(
   req: NextRequest,
@@ -30,8 +30,8 @@ export async function PUT(
       Cookie: authCookies,
     },
   });
-  const packs = await packRes.json();
-  if (!Array.isArray(packs) || !packs.length) {
+  const packs = unwrapNCBArray(await packRes.json());
+  if (!packs.length) {
     return NextResponse.json({ error: "Pack not found" }, { status: 404 });
   }
   const packId = packs[0].id;
@@ -45,10 +45,10 @@ export async function PUT(
       Cookie: authCookies,
     },
   });
-  const configs = await cfgRes.json();
+  const configs = unwrapNCBArray(await cfgRes.json());
 
   let res: Response;
-  if (Array.isArray(configs) && configs.length) {
+  if (configs.length) {
     // Update existing
     const updateUrl = `${CONFIG.dataApiUrl}/update/pack_config?Instance=${CONFIG.instance}&id=eq.${configs[0].id}`;
     res = await fetch(updateUrl, {

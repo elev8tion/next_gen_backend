@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CONFIG, extractAuthCookies, getSessionUser } from "@/lib/ncb-utils";
+import { CONFIG, extractAuthCookies, getSessionUser, unwrapNCBArray } from "@/lib/ncb-utils";
 import seedData from "@/lib/generator/seed-data.json";
 
 interface SeedModule {
@@ -54,7 +54,7 @@ async function ncbRead(
   });
   if (!res.ok) return [];
   const data = await res.json();
-  return Array.isArray(data) ? data : [];
+  return unwrapNCBArray(data);
 }
 
 export async function POST(req: NextRequest) {

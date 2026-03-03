@@ -7,6 +7,20 @@ export const CONFIG = {
   appUrl: process.env.NCB_APP_URL || "https://app.nocodebackend.com",
 };
 
+/**
+ * NCB read endpoints may return a plain array, or a wrapped object like
+ * { data: [...] } or { rows: [...] }. This normalizes any shape to an array.
+ */
+export function unwrapNCBArray<T = Record<string, unknown>>(data: unknown): T[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    const obj = data as Record<string, unknown>;
+    if (Array.isArray(obj.data)) return obj.data;
+    if (Array.isArray(obj.rows)) return obj.rows;
+  }
+  return [];
+}
+
 export function extractAuthCookies(cookieHeader: string): string {
   if (!cookieHeader) return "";
   const cookies = cookieHeader.split(";");

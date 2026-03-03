@@ -76,7 +76,7 @@ export default function PackDetail() {
     ])
       .then(([packData, buildsData]) => {
         setPack(packData);
-        setBuilds(buildsData);
+        setBuilds(Array.isArray(buildsData) ? buildsData : []);
         setConfigDraft(packData.config || {});
         if (autoBuild && !packData.error) {
           runBuild();

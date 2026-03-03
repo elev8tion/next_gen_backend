@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CONFIG, extractAuthCookies, getSessionUser } from "@/lib/ncb-utils";
+import { CONFIG, extractAuthCookies, getSessionUser, unwrapNCBArray } from "@/lib/ncb-utils";
 
 export async function GET(
   req: NextRequest,
@@ -20,10 +20,10 @@ export async function GET(
     }),
   ]);
 
-  const projects = await projRes.json();
-  const canvases = await canvasesRes.json();
+  const projects = unwrapNCBArray(await projRes.json());
+  const canvases = unwrapNCBArray(await canvasesRes.json());
 
-  if (!Array.isArray(projects) || !projects.length) {
+  if (!projects.length) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
@@ -66,22 +66,20 @@ export async function DELETE(
   const canvasesRes = await fetch(`${CONFIG.dataApiUrl}/read/ui_canvases?Instance=${CONFIG.instance}&project_id=eq.${projectId}`, {
     headers: { "Content-Type": "application/json", "X-Database-Instance": CONFIG.instance, Cookie: authCookies },
   });
-  const canvases = await canvasesRes.json();
+  const canvases = unwrapNCBArray(await canvasesRes.json());
 
-  if (Array.isArray(canvases)) {
-    for (const canvas of canvases) {
-      for (const table of ["ui_canvas_edges", "ui_canvas_nodes"]) {
-        await fetch(`${CONFIG.dataApiUrl}/delete/${table}?Instance=${CONFIG.instance}&canvas_id=eq.${canvas.id}`, {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json", "X-Database-Instance": CONFIG.instance, Cookie: authCookies, Origin: origin },
-        });
-      }
+  for (const canvas of canvases) {
+    for (const table of ["ui_canvas_edges", "ui_canvas_nodes"]) {
+      await fetch(`${CONFIG.dataApiUrl}/delete/${table}?Instance=${CONFIG.instance}&canvas_id=eq.${(canvas as { id: string }).id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", "X-Database-Instance": CONFIG.instance, Cookie: authCookies, Origin: origin },
+      });
     }
-    await fetch(`${CONFIG.dataApiUrl}/delete/ui_canvases?Instance=${CONFIG.instance}&project_id=eq.${projectId}`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json", "X-Database-Instance": CONFIG.instance, Cookie: authCookies, Origin: origin },
-    });
   }
+  await fetch(`${CONFIG.dataApiUrl}/delete/ui_canvases?Instance=${CONFIG.instance}&project_id=eq.${projectId}`, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json", "X-Database-Instance": CONFIG.instance, Cookie: authCookies, Origin: origin },
+  });
 
   await fetch(`${CONFIG.dataApiUrl}/delete/ui_projects?Instance=${CONFIG.instance}&id=eq.${projectId}`, {
     method: "DELETE",

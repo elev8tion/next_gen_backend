@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CONFIG, extractAuthCookies, getSessionUser } from "@/lib/ncb-utils";
+import { CONFIG, extractAuthCookies, getSessionUser, unwrapNCBArray } from "@/lib/ncb-utils";
 
 export async function GET(
   req: NextRequest,
@@ -20,8 +20,8 @@ export async function GET(
     }),
   ]);
 
-  const nodes = await nodesRes.json();
-  const edges = await edgesRes.json();
+  const nodes = unwrapNCBArray(await nodesRes.json());
+  const edges = unwrapNCBArray(await edgesRes.json());
 
   return NextResponse.json({ canvas_id: canvasId, nodes, edges });
 }

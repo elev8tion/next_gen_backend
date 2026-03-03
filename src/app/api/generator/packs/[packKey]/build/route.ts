@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CONFIG, extractAuthCookies, getSessionUser } from "@/lib/ncb-utils";
+import { CONFIG, extractAuthCookies, getSessionUser, unwrapNCBArray } from "@/lib/ncb-utils";
 import { runFullPipeline } from "@/lib/generator/pipeline";
 
 export async function POST(
@@ -46,8 +46,8 @@ export async function POST(
           Cookie: authCookies,
         },
       });
-      const packs = await packRes.json();
-      const packId = Array.isArray(packs) && packs.length ? packs[0].id : null;
+      const packs = unwrapNCBArray(await packRes.json());
+      const packId = packs.length ? (packs[0] as { id: string }).id : null;
 
       if (packId) {
         const historyUrl = `${CONFIG.dataApiUrl}/read/pack_builds?Instance=${CONFIG.instance}&pack_id=eq.${packId}&order=build_number.desc&limit=1`;
@@ -59,9 +59,9 @@ export async function POST(
           },
         });
         if (historyRes.ok) {
-          const history = await historyRes.json();
-          if (Array.isArray(history) && history.length) {
-            nextBuildNumber = history[0].build_number + 1;
+          const history = unwrapNCBArray(await historyRes.json());
+          if (history.length) {
+            nextBuildNumber = (history[0] as { build_number: number }).build_number + 1;
           }
         }
 

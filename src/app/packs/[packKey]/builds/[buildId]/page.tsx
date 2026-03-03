@@ -46,7 +46,8 @@ export default function BuildOutput() {
     fetch(`/api/generator/packs/${packKey}/builds`, { credentials: "include" })
       .then(async (res) => {
         if (!res.ok) throw new Error("Failed to load builds");
-        const builds = await res.json();
+        const buildsRaw = await res.json();
+        const builds = Array.isArray(buildsRaw) ? buildsRaw : [];
         // Find the specific build - buildId is the build_number
         const match = builds.find((b: { build_number: number; id: string }) =>
           String(b.build_number) === buildId || b.id === buildId
@@ -55,8 +56,9 @@ export default function BuildOutput() {
         // Fetch full build data
         const fullRes = await fetch(`/api/data/read/pack_builds?id=eq.${match.id}`, { credentials: "include" });
         if (!fullRes.ok) throw new Error("Failed to load build details");
-        const full = await fullRes.json();
-        if (Array.isArray(full) && full.length) {
+        const fullRaw = await fullRes.json();
+        const full = Array.isArray(fullRaw) ? fullRaw : Array.isArray(fullRaw?.data) ? fullRaw.data : Array.isArray(fullRaw?.rows) ? fullRaw.rows : [];
+        if (full.length) {
           const b = full[0];
           b.resolved_manifest = typeof b.resolved_manifest === "string" ? JSON.parse(b.resolved_manifest) : b.resolved_manifest;
           b.runtime_manifest = typeof b.runtime_manifest === "string" ? JSON.parse(b.runtime_manifest) : b.runtime_manifest;

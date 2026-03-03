@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CONFIG, extractAuthCookies, getSessionUser } from "@/lib/ncb-utils";
+import { CONFIG, extractAuthCookies, getSessionUser, unwrapNCBArray } from "@/lib/ncb-utils";
 
 export async function GET(req: NextRequest) {
   const user = await getSessionUser(req.headers.get("cookie") || "");
@@ -18,8 +18,7 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  const data = await res.json();
-  const modules = Array.isArray(data) ? data : Array.isArray(data?.data) ? data.data : Array.isArray(data?.rows) ? data.rows : [];
+  const modules = unwrapNCBArray(await res.json());
   return NextResponse.json(modules);
 }
 

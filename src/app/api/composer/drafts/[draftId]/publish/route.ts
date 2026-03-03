@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CONFIG, extractAuthCookies, getSessionUser } from "@/lib/ncb-utils";
+import { CONFIG, extractAuthCookies, getSessionUser, unwrapNCBArray } from "@/lib/ncb-utils";
 import { validateBlueprint } from "@/lib/generator/blueprint-validator";
 import type { BlueprintModule } from "@/lib/generator/types";
 
@@ -19,8 +19,8 @@ export async function POST(
   const draftRes = await fetch(`${CONFIG.dataApiUrl}/read/ui_blueprint_drafts?Instance=${CONFIG.instance}&id=eq.${draftId}`, {
     headers: { "Content-Type": "application/json", "X-Database-Instance": CONFIG.instance, Cookie: authCookies },
   });
-  const drafts = await draftRes.json();
-  if (!Array.isArray(drafts) || !drafts.length) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const drafts = unwrapNCBArray(await draftRes.json());
+  if (!drafts.length) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const blueprint = drafts[0].blueprint_json as BlueprintModule;
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CONFIG, extractAuthCookies, getSessionUser } from "@/lib/ncb-utils";
+import { CONFIG, extractAuthCookies, getSessionUser, unwrapNCBArray } from "@/lib/ncb-utils";
 
 export async function GET(
   req: NextRequest,
@@ -14,7 +14,7 @@ export async function GET(
   const res = await fetch(`${CONFIG.dataApiUrl}/read/ui_canvas_edges?Instance=${CONFIG.instance}&canvas_id=eq.${canvasId}`, {
     headers: { "Content-Type": "application/json", "X-Database-Instance": CONFIG.instance, Cookie: authCookies },
   });
-  return NextResponse.json(await res.json());
+  return NextResponse.json(unwrapNCBArray(await res.json()));
 }
 
 export async function POST(

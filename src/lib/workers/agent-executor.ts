@@ -1,4 +1,4 @@
-import { CONFIG, extractAuthCookies } from "@/lib/ncb-utils";
+import { CONFIG, extractAuthCookies, unwrapNCBArray } from "@/lib/ncb-utils";
 
 interface AgentTask {
   id: string;
@@ -43,13 +43,18 @@ export async function executeAgentTasks(
   batchSize = 10
 ): Promise<{ processed: number; results: { task_id: string; success: boolean; error?: string }[] }> {
   // 1. Poll queued tasks
-  const tasks: AgentTask[] = await ncbFetch(
-    `read/ai_agent_tasks?status=eq.queued&limit=${batchSize}&order=created_at.asc`,
-    authCookies,
-    origin
-  );
+  let tasks: AgentTask[];
+  try {
+    tasks = unwrapNCBArray<AgentTask>(await ncbFetch(
+      `read/ai_agent_tasks?status=eq.queued&limit=${batchSize}&order=created_at.asc`,
+      authCookies,
+      origin
+    ));
+  } catch {
+    return { processed: 0, results: [] };
+  }
 
-  if (!Array.isArray(tasks) || tasks.length === 0) {
+  if (tasks.length === 0) {
     return { processed: 0, results: [] };
   }
 
@@ -63,29 +68,29 @@ export async function executeAgentTasks(
 
     try {
       // Get agent config
-      const agents: AgentConfig[] = await ncbFetch(
+      const agents = unwrapNCBArray<AgentConfig>(await ncbFetch(
         `read/ai_agents?id=eq.${task.agent_id}`,
         authCookies,
         origin
-      );
-      if (!Array.isArray(agents) || !agents.length) {
+      ));
+      if (!agents.length) {
         throw new Error(`Agent not found: ${task.agent_id}`);
       }
 
       // Get agent tools
-      const agentTools: { tool_id: string }[] = await ncbFetch(
+      const agentTools = unwrapNCBArray<{ tool_id: string }>(await ncbFetch(
         `read/ai_agent_tools?agent_id=eq.${task.agent_id}`,
         authCookies,
         origin
-      );
+      ));
 
-      if (Array.isArray(agentTools) && agentTools.length > 0) {
+      if (agentTools.length > 0) {
         const toolIds = agentTools.map((at) => at.tool_id);
-        const tools: AgentTool[] = await ncbFetch(
+        const tools = unwrapNCBArray<AgentTool>(await ncbFetch(
           `read/ai_tools?id=in.(${toolIds.join(",")})`,
           authCookies,
           origin
-        );
+        ));
 
         // Execute each tool call (simplified)
         for (const tool of tools) {

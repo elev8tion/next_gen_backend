@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CONFIG, extractAuthCookies, getSessionUser } from "@/lib/ncb-utils";
+import { CONFIG, extractAuthCookies, getSessionUser, unwrapNCBArray } from "@/lib/ncb-utils";
 
 export async function POST(
   req: NextRequest,
@@ -30,8 +30,8 @@ export async function POST(
       Cookie: authCookies,
     },
   });
-  const packs = await packRes.json();
-  if (!Array.isArray(packs) || !packs.length) {
+  const packs = unwrapNCBArray(await packRes.json());
+  if (!packs.length) {
     return NextResponse.json({ error: "Pack not found" }, { status: 404 });
   }
   const packId = packs[0].id;
@@ -45,8 +45,8 @@ export async function POST(
       Cookie: authCookies,
     },
   });
-  const versions = await verRes.json();
-  if (!Array.isArray(versions) || !versions.length) {
+  const versions = unwrapNCBArray(await verRes.json());
+  if (!versions.length) {
     return NextResponse.json({ error: `No version found for module: ${module_key}` }, { status: 404 });
   }
   const versionId = versions[0].id;
@@ -60,8 +60,8 @@ export async function POST(
       Cookie: authCookies,
     },
   });
-  const existingMods = await modsRes.json();
-  const maxOrder = Array.isArray(existingMods) && existingMods.length ? existingMods[0].load_order : 0;
+  const existingMods = unwrapNCBArray(await modsRes.json());
+  const maxOrder = existingMods.length ? (existingMods[0] as { load_order: number }).load_order : 0;
 
   const createUrl = `${CONFIG.dataApiUrl}/create/pack_modules?Instance=${CONFIG.instance}`;
   const res = await fetch(createUrl, {

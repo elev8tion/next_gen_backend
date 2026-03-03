@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CONFIG, extractAuthCookies, getSessionUser } from "@/lib/ncb-utils";
+import { CONFIG, extractAuthCookies, getSessionUser, unwrapNCBArray } from "@/lib/ncb-utils";
 
 export async function GET(
   req: NextRequest,
@@ -23,8 +23,8 @@ export async function GET(
       Cookie: authCookies,
     },
   });
-  const packs = await packRes.json();
-  if (!Array.isArray(packs) || !packs.length) {
+  const packs = unwrapNCBArray(await packRes.json());
+  if (!packs.length) {
     return NextResponse.json({ error: "Pack not found" }, { status: 404 });
   }
 
@@ -37,7 +37,7 @@ export async function GET(
     },
   });
 
-  const builds = await buildsRes.json();
+  const builds = unwrapNCBArray(await buildsRes.json());
   // Return summary (not full SQL/manifest)
   const summary = (builds as { id: string; build_number: number; generated_at: string; user_id?: string }[]).map((b) => ({
     id: b.id,

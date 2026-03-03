@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CONFIG, extractAuthCookies, getSessionUser } from "@/lib/ncb-utils";
+import { CONFIG, extractAuthCookies, getSessionUser, unwrapNCBArray } from "@/lib/ncb-utils";
 
 export async function GET(req: NextRequest) {
   const user = await getSessionUser(req.headers.get("cookie") || "");
@@ -26,8 +26,7 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const packsRaw = await packsRes.json();
-  const packs = Array.isArray(packsRaw) ? packsRaw : Array.isArray(packsRaw?.data) ? packsRaw.data : Array.isArray(packsRaw?.rows) ? packsRaw.rows : [];
+  const packs = unwrapNCBArray(await packsRes.json());
 
   // Fetch module counts per pack
   const modulesUrl = `${CONFIG.dataApiUrl}/read/pack_modules?Instance=${CONFIG.instance}`;
@@ -39,11 +38,10 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  const allModulesRaw = modulesRes.ok ? await modulesRes.json() : [];
-  const allModules = Array.isArray(allModulesRaw) ? allModulesRaw : Array.isArray(allModulesRaw?.data) ? allModulesRaw.data : Array.isArray(allModulesRaw?.rows) ? allModulesRaw.rows : [];
+  const allModules = modulesRes.ok ? unwrapNCBArray(await modulesRes.json()) : [];
 
   // Attach module count to each pack
-  const result = packs.map((pack: { id: string; pack_key: string; name: string; description?: string }) => {
+  const result = (packs as { id: string; pack_key: string; name: string; description?: string }[]).map((pack) => {
     const moduleCount = (allModules as { pack_id: string }[]).filter((m) => m.pack_id === pack.id).length;
     return { ...pack, module_count: moduleCount };
   });

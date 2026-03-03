@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CONFIG, extractAuthCookies, getSessionUser } from "@/lib/ncb-utils";
+import { CONFIG, extractAuthCookies, getSessionUser, unwrapNCBArray } from "@/lib/ncb-utils";
 import { getNextRunAt } from "@/lib/workers/cron-parser";
 
 interface Schedule {
@@ -31,9 +31,9 @@ export async function POST(req: NextRequest) {
     const res = await fetch(url, {
       headers: { "Content-Type": "application/json", "X-Database-Instance": CONFIG.instance, Cookie: authCookies },
     });
-    const schedules: Schedule[] = await res.json();
+    const schedules = unwrapNCBArray<Schedule>(await res.json().catch(() => []));
 
-    if (!Array.isArray(schedules) || schedules.length === 0) {
+    if (schedules.length === 0) {
       return NextResponse.json({ processed: 0 });
     }
 

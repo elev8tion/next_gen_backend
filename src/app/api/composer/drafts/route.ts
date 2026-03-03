@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CONFIG, extractAuthCookies, getSessionUser } from "@/lib/ncb-utils";
+import { CONFIG, extractAuthCookies, getSessionUser, unwrapNCBArray } from "@/lib/ncb-utils";
 
 export async function GET(req: NextRequest) {
   const user = await getSessionUser(req.headers.get("cookie") || "");
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const res = await fetch(`${CONFIG.dataApiUrl}/read/ui_blueprint_drafts?Instance=${CONFIG.instance}&order=created_at.desc${filter}`, {
     headers: { "Content-Type": "application/json", "X-Database-Instance": CONFIG.instance, Cookie: authCookies },
   });
-  return NextResponse.json(await res.json());
+  return NextResponse.json(unwrapNCBArray(await res.json()));
 }
 
 export async function POST(req: NextRequest) {

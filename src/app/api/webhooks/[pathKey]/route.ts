@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CONFIG } from "@/lib/ncb-utils";
+import { CONFIG, unwrapNCBArray } from "@/lib/ncb-utils";
 import { createHmac } from "crypto";
 
 export async function POST(
@@ -9,16 +9,21 @@ export async function POST(
   const { pathKey } = await params;
 
   // Look up webhook config (public read)
-  const webhookUrl = `${CONFIG.dataApiUrl}/read/inbound_webhooks?Instance=${CONFIG.instance}&path_key=eq.${pathKey}&is_active=eq.true`;
-  const webhookRes = await fetch(webhookUrl, {
-    headers: {
-      "Content-Type": "application/json",
-      "X-Database-Instance": CONFIG.instance,
-    },
-  });
+  let webhooks: unknown[];
+  try {
+    const webhookUrl = `${CONFIG.dataApiUrl}/read/inbound_webhooks?Instance=${CONFIG.instance}&path_key=eq.${pathKey}&is_active=eq.true`;
+    const webhookRes = await fetch(webhookUrl, {
+      headers: {
+        "Content-Type": "application/json",
+        "X-Database-Instance": CONFIG.instance,
+      },
+    });
+    webhooks = unwrapNCBArray(await webhookRes.json());
+  } catch {
+    return NextResponse.json({ error: "Webhook not found" }, { status: 404 });
+  }
 
-  const webhooks = await webhookRes.json();
-  if (!Array.isArray(webhooks) || !webhooks.length) {
+  if (!webhooks.length) {
     return NextResponse.json({ error: "Webhook not found" }, { status: 404 });
   }
 
