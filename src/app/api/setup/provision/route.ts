@@ -31,6 +31,12 @@ const TABLES = [
   "ai_agent_tasks",
   "ai_agent_task_steps",
   "ai_runs",
+  // AI/Retrieval
+  "knowledge_collections",
+  "knowledge_documents",
+  "knowledge_chunks",
+  "knowledge_embeddings",
+  "knowledge_links",
   // Webhooks
   "inbound_webhooks",
   // Workflows

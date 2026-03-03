@@ -15,7 +15,7 @@ const VALID_FIELD_TYPES = new Set([
   "uuid", "text", "varchar", "int", "integer", "bigint", "smallint",
   "boolean", "jsonb", "json", "timestamptz", "timestamp", "date",
   "numeric", "decimal", "float", "double precision", "real",
-  "bytea", "serial", "bigserial", "varchar(3)", "varchar(10)",
+  "bytea", "vector", "serial", "bigserial", "varchar(3)", "varchar(10)",
   "varchar(20)", "varchar(30)", "varchar(50)", "varchar(60)",
   "varchar(100)", "varchar(120)", "varchar(200)", "varchar(255)",
   "varchar(300)", "varchar(320)", "varchar(500)", "varchar(1000)",
@@ -26,6 +26,7 @@ function isValidFieldType(type: string): boolean {
   if (/^varchar\(\d+\)$/.test(type)) return true;
   if (/^numeric\(\d+,\d+\)$/.test(type)) return true;
   if (/^char\(\d+\)$/.test(type)) return true;
+  if (/^vector\(\d+\)$/.test(type)) return true;
   return false;
 }
 

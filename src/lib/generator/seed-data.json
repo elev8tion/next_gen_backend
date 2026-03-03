@@ -919,6 +919,437 @@
       }
     },
     {
+      "module_key": "ai.retrieval",
+      "name": "AI Retrieval",
+      "layer": "domain",
+      "description": "Persistent semantic memory: knowledge collections, documents, chunking, vector embeddings, and retrieval queries.",
+      "blueprint_json": {
+        "module": {
+          "key": "ai.retrieval",
+          "name": "AI Retrieval",
+          "version": "1.0.0",
+          "description": "Persistent semantic memory: knowledge collections, documents, chunking, vector embeddings, and retrieval queries."
+        },
+        "dependencies": [
+          {
+            "module_key": "ai.core",
+            "version_range": "^1.0.0"
+          },
+          {
+            "module_key": "core.events",
+            "version_range": "^1.0.0",
+            "optional": true
+          },
+          {
+            "module_key": "core.identity",
+            "version_range": "^1.0.0",
+            "optional": true
+          }
+        ],
+        "config": {
+          "options": {
+            "retrieval_enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "default_chunk_size": {
+              "type": "int",
+              "default": 512
+            },
+            "default_chunk_overlap": {
+              "type": "int",
+              "default": 50
+            },
+            "embedding_dimensions": {
+              "type": "int",
+              "default": 1536
+            }
+          }
+        },
+        "entities": [
+          {
+            "name": "knowledge_collection",
+            "table": "knowledge_collections",
+            "description": "Logical grouping of knowledge documents.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "organization_id",
+                "type": "uuid",
+                "nullable": true,
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "name": "name",
+                "type": "varchar(200)",
+                "nullable": false
+              },
+              {
+                "name": "description",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "config_json",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "is_active",
+                "type": "boolean",
+                "nullable": false,
+                "default": "true"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              },
+              {
+                "name": "updated_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": ["organization_id"],
+                "when": "config.multi_tenant == true"
+              },
+              {
+                "columns": ["name"]
+              }
+            ]
+          },
+          {
+            "name": "knowledge_document",
+            "table": "knowledge_documents",
+            "description": "Top-level knowledge units to be chunked and embedded.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "collection_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "title",
+                "type": "varchar(500)",
+                "nullable": false
+              },
+              {
+                "name": "source_type",
+                "type": "varchar(60)",
+                "nullable": false,
+                "default": "'manual'"
+              },
+              {
+                "name": "source_url",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "content",
+                "type": "text",
+                "nullable": true
+              },
+              {
+                "name": "metadata",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "chunk_count",
+                "type": "int",
+                "nullable": false,
+                "default": "0"
+              },
+              {
+                "name": "status",
+                "type": "varchar(30)",
+                "nullable": false,
+                "default": "'pending'"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              },
+              {
+                "name": "updated_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": ["collection_id"]
+              },
+              {
+                "columns": ["status"]
+              },
+              {
+                "columns": ["source_type"]
+              }
+            ],
+            "events": [
+              {
+                "name": "ai.knowledge_document.created",
+                "emit_on": "insert"
+              },
+              {
+                "name": "ai.knowledge_document.indexed",
+                "emit_on": "update",
+                "when": "NEW.status = 'indexed'"
+              }
+            ]
+          },
+          {
+            "name": "knowledge_chunk",
+            "table": "knowledge_chunks",
+            "description": "Text segments derived from documents for embedding.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "document_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "chunk_index",
+                "type": "int",
+                "nullable": false
+              },
+              {
+                "name": "content",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "token_count",
+                "type": "int",
+                "nullable": true
+              },
+              {
+                "name": "metadata",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": ["document_id", "chunk_index"],
+                "unique": true
+              },
+              {
+                "columns": ["document_id"]
+              }
+            ]
+          },
+          {
+            "name": "knowledge_embedding",
+            "table": "knowledge_embeddings",
+            "description": "Vector storage for knowledge chunks, reusing ai.core conditional pattern.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "chunk_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "model",
+                "type": "text",
+                "nullable": false,
+                "default": "config.default_embedding_model"
+              },
+              {
+                "name": "vector",
+                "type": "bytea",
+                "nullable": false,
+                "when": "config.store_vectors_as == 'bytea'"
+              },
+              {
+                "name": "vector",
+                "type": "vector(1536)",
+                "nullable": false,
+                "when": "config.store_vectors_as == 'pgvector'"
+              },
+              {
+                "name": "metadata",
+                "type": "jsonb",
+                "nullable": true
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": ["chunk_id"]
+              }
+            ]
+          },
+          {
+            "name": "knowledge_link",
+            "table": "knowledge_links",
+            "description": "Polymorphic link connecting documents to any system entity.",
+            "fields": [
+              {
+                "name": "id",
+                "type": "uuid",
+                "pk": true
+              },
+              {
+                "name": "document_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "entity_type",
+                "type": "text",
+                "nullable": false
+              },
+              {
+                "name": "entity_id",
+                "type": "uuid",
+                "nullable": false
+              },
+              {
+                "name": "link_type",
+                "type": "varchar(60)",
+                "nullable": false,
+                "default": "'source'"
+              },
+              {
+                "name": "created_at",
+                "type": "timestamptz",
+                "nullable": false,
+                "default": "now()"
+              }
+            ],
+            "indexes": [
+              {
+                "columns": ["document_id"]
+              },
+              {
+                "columns": ["entity_type", "entity_id"]
+              },
+              {
+                "columns": ["document_id", "entity_type", "entity_id"],
+                "unique": true
+              }
+            ]
+          }
+        ],
+        "relationships": [
+          {
+            "name": "knowledge_document.collection",
+            "from": {
+              "entity": "knowledge_document",
+              "field": "collection_id"
+            },
+            "to": {
+              "module_key": "ai.retrieval",
+              "entity": "knowledge_collection",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "knowledge_chunk.document",
+            "from": {
+              "entity": "knowledge_chunk",
+              "field": "document_id"
+            },
+            "to": {
+              "module_key": "ai.retrieval",
+              "entity": "knowledge_document",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "knowledge_embedding.chunk",
+            "from": {
+              "entity": "knowledge_embedding",
+              "field": "chunk_id"
+            },
+            "to": {
+              "module_key": "ai.retrieval",
+              "entity": "knowledge_chunk",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          },
+          {
+            "name": "knowledge_link.document",
+            "from": {
+              "entity": "knowledge_link",
+              "field": "document_id"
+            },
+            "to": {
+              "module_key": "ai.retrieval",
+              "entity": "knowledge_document",
+              "field": "id"
+            },
+            "cardinality": "many_to_one",
+            "on_delete": "cascade"
+          }
+        ],
+        "events": [
+          {
+            "name": "ai.knowledge_document.created",
+            "schema": {
+              "document_id": "uuid",
+              "collection_id": "uuid",
+              "occurred_at": "timestamptz"
+            }
+          },
+          {
+            "name": "ai.knowledge_document.indexed",
+            "schema": {
+              "document_id": "uuid",
+              "chunk_count": "int",
+              "occurred_at": "timestamptz"
+            }
+          }
+        ]
+      }
+    },
+    {
       "module_key": "automation.integrations",
       "name": "Automation Integrations",
       "layer": "domain",
@@ -5161,24 +5592,28 @@
           "load_order": 10
         },
         {
-          "module_key": "automation.workflow",
+          "module_key": "ai.retrieval",
           "load_order": 11
         },
         {
-          "module_key": "automation.rules",
+          "module_key": "automation.workflow",
           "load_order": 12
         },
         {
-          "module_key": "automation.scheduler",
+          "module_key": "automation.rules",
           "load_order": 13
         },
         {
-          "module_key": "automation.integrations",
+          "module_key": "automation.scheduler",
           "load_order": 14
         },
         {
-          "module_key": "crm.core",
+          "module_key": "automation.integrations",
           "load_order": 15
+        },
+        {
+          "module_key": "crm.core",
+          "load_order": 16
         }
       ],
       "config": {
@@ -5192,6 +5627,8 @@
         "lead_scoring_enabled": true,
         "ai_next_best_action_enabled": true,
         "ai_routing_enabled": true,
+        "retrieval_enabled": true,
+        "semantic_search_enabled": true,
         "rules_enabled": true,
         "scheduler_enabled": true,
         "integrations_enabled": true
@@ -5239,24 +5676,28 @@
           "load_order": 9
         },
         {
-          "module_key": "automation.workflow",
+          "module_key": "ai.retrieval",
           "load_order": 10
         },
         {
-          "module_key": "automation.rules",
+          "module_key": "automation.workflow",
           "load_order": 11
         },
         {
-          "module_key": "automation.scheduler",
+          "module_key": "automation.rules",
           "load_order": 12
         },
         {
-          "module_key": "automation.integrations",
+          "module_key": "automation.scheduler",
           "load_order": 13
         },
         {
-          "module_key": "ticketing.core",
+          "module_key": "automation.integrations",
           "load_order": 14
+        },
+        {
+          "module_key": "ticketing.core",
+          "load_order": 15
         }
       ],
       "config": {
@@ -5267,7 +5708,9 @@
         "ai_auto_triage_enabled": true,
         "ai_priority_prediction_enabled": true,
         "ai_agent_assist_enabled": true,
-        "ai_routing_enabled": true
+        "ai_routing_enabled": true,
+        "retrieval_enabled": true,
+        "semantic_search_enabled": true
       }
     },
     {
@@ -5377,24 +5820,28 @@
           "load_order": 9
         },
         {
-          "module_key": "automation.workflow",
+          "module_key": "ai.retrieval",
           "load_order": 10
         },
         {
-          "module_key": "automation.rules",
+          "module_key": "automation.workflow",
           "load_order": 11
         },
         {
-          "module_key": "automation.scheduler",
+          "module_key": "automation.rules",
           "load_order": 12
         },
         {
-          "module_key": "automation.integrations",
+          "module_key": "automation.scheduler",
           "load_order": 13
         },
         {
-          "module_key": "saas.core",
+          "module_key": "automation.integrations",
           "load_order": 14
+        },
+        {
+          "module_key": "saas.core",
+          "load_order": 15
         }
       ],
       "config": {
@@ -5404,6 +5851,8 @@
         "embeddings_enabled": true,
         "suggestions_enabled": true,
         "ai_assistant_enabled": true,
+        "retrieval_enabled": true,
+        "semantic_search_enabled": true,
         "rules_enabled": true,
         "scheduler_enabled": true,
         "integrations_enabled": true
