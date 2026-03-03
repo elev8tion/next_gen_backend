@@ -202,8 +202,33 @@ export default function CanvasEditor() {
 
   async function handleGenerateSQL() {
     setGenerating(true);
-    setSql("// SQL generation requires a pack with these modules.\n// Use the Pack Builder to create a pack from these modules, then build.");
-    setGenerating(false);
+    setSql("");
+    try {
+      const moduleKeys = nodes
+        .filter((n) => n.type === "module")
+        .map((n) => (n.data as { module_key?: string }).module_key)
+        .filter(Boolean);
+      if (moduleKeys.length === 0) {
+        setSql("-- No modules on canvas");
+        return;
+      }
+      const res = await fetch("/api/generator/preview-sql", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ module_keys: moduleKeys }),
+      });
+      const data = await res.json();
+      if (data.validation) {
+        setErrors(data.validation.errors || []);
+        setWarnings(data.validation.warnings || []);
+      }
+      setSql(data.sql || "-- Validation failed, check errors");
+    } catch (err) {
+      setSql(`-- Error: ${err instanceof Error ? err.message : "Failed"}`);
+    } finally {
+      setGenerating(false);
+    }
   }
 
   if (loading) {

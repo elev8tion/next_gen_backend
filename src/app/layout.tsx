@@ -46,6 +46,9 @@ export default function RootLayout({
               <a href="/workers" className="text-muted hover:text-foreground transition-colors">
                 Workers
               </a>
+              <a href="/setup" className="text-muted hover:text-foreground transition-colors">
+                Setup
+              </a>
               <NavUser />
             </div>
           </div>
