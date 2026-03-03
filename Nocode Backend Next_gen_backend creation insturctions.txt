@@ -1,0 +1,3743 @@
+The Correct Mental Model
+
+Instead of:
+
+“Database templates”
+
+Think:
+
+“Composable system primitives with AI augmentation hooks”
+
+Your system should have 4 architectural layers:
+Layer 1: Core System Primitives
+Layer 2: Business Domain Modules
+Layer 3: Workflow / Automation Engine
+Layer 4: AI Intelligence Layer
+
+AI should not be an afterthought. It should be attachable to anything
+
+
+LAYER 1 — Core System Primitives (Foundation)
+
+These exist in almost every serious product.
+
+Identity & Access
+	•	users
+	•	organizations
+	•	memberships
+	•	roles
+	•	permissions
+
+Ownership Pattern
+
+Every entity optionally supports:
+	•	owner_id
+	•	organization_id
+
+Activity / Audit Trail
+	•	activity_logs
+	•	entity_changes
+
+File / Attachment System
+	•	files
+	•	file_embeddings (AI hook)
+
+Comment / Collaboration System
+	•	comments
+	•	comment_threads
+	•	comment_embeddings (AI hook)
+
+Business Domain Modules
+
+These are swappable.
+
+Marketplace Core
+
+Images provided
+
+Core:
+	•	listings
+	•	vendors
+	•	buyers
+	•	orders
+	•	payouts
+	•	reviews
+
+AI layer attaches:
+	•	listing_embeddings
+	•	semantic search
+	•	recommendation_scores
+
+⸻
+
+ AI Product Core
+
+This is universal for AI-native apps:
+	•	prompts
+	•	model_runs
+	•	model_outputs
+	•	embeddings
+	•	vector_index_metadata
+	•	feedback
+
+Every AI product needs this.
+
+⸻
+
+ Internal Automation / Workflow
+
+Images provided
+
+
+Core:
+	•	workflows
+	•	workflow_states
+	•	transitions
+	•	workflow_instances
+	•	triggers
+	•	actions
+
+AI attaches:
+	•	intelligent routing
+	•	state prediction
+	•	anomaly detection
+
+⸻
+
+ Financial / Ledger System
+	•	accounts
+	•	journal_entries
+	•	transactions
+	•	transaction_lines
+
+AI layer:
+	•	fraud signals
+	•	anomaly scoring
+	•	forecasting projections
+
+⸻
+
+ LAYER 3 — Universal Automation Engine
+
+This is critical for internal tools and marketplaces.
+
+Event Bus Pattern
+	•	events
+	•	event_subscriptions
+	•	event_payloads
+
+Everything emits events.
+
+Example:
+	•	order.created
+	•	user.invited
+	•	invoice.overdue
+	•	listing.updated
+
+AI layer subscribes to events.
+
+⸻
+
+ LAYER 4 — AI Component Layer (The Important Part)
+
+This should be system-wide, not per module.
+
+Think of AI as a cross-cutting service layer.
+
+⸻
+
+ Universal AI Tables
+
+ Embeddings Store
+
+embeddings
+----------
+id
+entity_type
+entity_id
+vector
+model
+created_at
+
+Attach to:
+	•	listings
+	•	documents
+	•	tickets
+	•	messages
+	•	knowledge base entries
+
+AI Runs
+
+ai_runs
+-------
+id
+entity_type
+entity_id
+model
+input_payload
+output_payload
+status
+cost
+latency
+created_at
+
+Tracks every AI call.
+
+Critical for:
+	•	debugging
+	•	billing
+	•	analytics
+	•	prompt optimization
+
+⸻
+
+ AI Feedback Loop
+
+ai_feedback
+-----------
+id
+ai_run_id
+user_rating
+correction
+confidence_score
+
+Lets you improve prompts or train models later.
+
+⸻
+
+ AI Suggestions
+
+ai_suggestions
+--------------
+id
+entity_type
+entity_id
+suggestion_type
+content
+confidence
+status
+
+Examples:
+	•	“This listing needs better photos”
+	•	“This ticket seems urgent”
+	•	“This vendor is high risk”
+
+
+The Real Power Move
+
+Instead of hardcoding AI into each module, you define:
+
+AI Attach Points
+
+Each module declares:
+
+{
+  "entity": "listing",
+  "ai_capabilities": [
+    "semantic_search",
+    "recommendation",
+    "fraud_scoring",
+    "content_enhancement"
+  ]
+}
+
+Your generator then automatically:
+	•	Adds embedding support
+	•	Adds ai_run tracking
+	•	Adds suggestion hooks
+	•	Adds event subscriptions
+
+AI becomes plug-and-play.
+
+⸻
+
+ Your Final Folder Structure
+
+/core
+    identity.json
+    audit.json
+    events.json
+
+/domains
+    marketplace.json
+    automation.json
+    ledger.json
+    cms.json
+    booking.json
+
+/ai
+    embeddings.json
+    ai_runs.json
+    ai_feedback.json
+    ai_suggestions.json
+
+/patterns
+    workflow.json
+    soft_delete.json
+    state_machine.json
+
+Then compose:
+
+generate marketplace + workflow + ai
+generate automation + audit + ai
+generate cms + semantic_search + ai
+
+What This Enables
+
+I can build:
+	•	AI-enhanced marketplaces
+	•	Intelligent internal automation
+	•	AI-augmented SaaS tools
+	•	Knowledge systems with semantic retrieval
+	•	Financial tools with anomaly detection
+	•	AI-first CRMs
+	•	AI-first ticketing systems
+
+All from reusable primitives.
+
+Not building:
+
+A blog schema
+
+I am building:
+
+A reusable AI-augmented system architecture toolkit
+
+That compounds over time.
+ blueprint format around:
+	1.	Entities
+	2.	Relationships
+	3.	Events
+	4.	Attach points
+	5.	AI capabilities
+	6.	Dependencies
+	7.	Configurable options
+
+Not just tables.
+
+1) Blueprint format (what to store as JSON/YAML per module)
+
+Use one module = one blueprint. Store it as JSON (or YAML) and keep it database-agnostic, but with enough detail to generate SQL.
+
+Blueprint JSON shape (core)
+
+{
+  "module": {
+    "key": "marketplace.core",
+    "name": "Marketplace Core",
+    "version": "1.0.0",
+    "description": "Listings, orders, reviews; emits domain events; AI attach points supported."
+  },
+
+  "dependencies": [
+    { "module_key": "core.identity", "version_range": "^1.0.0" },
+    { "module_key": "core.events", "version_range": "^1.0.0" },
+    { "module_key": "ai.core", "version_range": "^1.0.0", "optional": true }
+  ],
+
+  "config": {
+    "options": {
+      "multi_tenant": { "type": "boolean", "default": true },
+      "soft_delete": { "type": "boolean", "default": true },
+      "currency": { "type": "string", "default": "USD" },
+      "reviews_enabled": { "type": "boolean", "default": true }
+    }
+  },
+
+  "entities": [
+    {
+      "name": "listing",
+      "table": "listings",
+      "description": "A sellable item/service.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "organization_id", "type": "uuid", "nullable": false, "when": "config.multi_tenant == true" },
+        { "name": "seller_user_id", "type": "uuid", "nullable": false },
+        { "name": "title", "type": "varchar(200)", "nullable": false },
+        { "name": "description", "type": "text", "nullable": true },
+        { "name": "price_cents", "type": "int", "nullable": false },
+        { "name": "currency", "type": "varchar(3)", "nullable": false, "default": "config.currency" },
+        { "name": "status", "type": "varchar(30)", "nullable": false, "default": "'active'" },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" },
+        { "name": "updated_at", "type": "timestamptz", "nullable": false, "default": "now()" },
+        { "name": "deleted_at", "type": "timestamptz", "nullable": true, "when": "config.soft_delete == true" }
+      ],
+      "indexes": [
+        { "columns": ["seller_user_id"] },
+        { "columns": ["organization_id"], "when": "config.multi_tenant == true" },
+        { "columns": ["status"] }
+      ],
+
+      "events": [
+        { "name": "listing.created", "emit_on": "insert" },
+        { "name": "listing.updated", "emit_on": "update" }
+      ],
+
+      "attach_points": [
+        { "name": "files", "kind": "attachment" },
+        { "name": "comments", "kind": "comment_thread" },
+        { "name": "ai.semantic_search", "kind": "embedding_target" }
+      ],
+
+      "ai_capabilities": [
+        {
+          "key": "semantic_search",
+          "requires": ["ai.core.embedding_store"],
+          "embedding": { "text_fields": ["title", "description"], "model_default": "text-embedding-3-large" }
+        },
+        {
+          "key": "content_enhancement",
+          "requires": ["ai.core.ai_runs"],
+          "prompts": [{ "key": "listing.rewrite", "purpose": "Rewrite listing description for clarity" }]
+        }
+      ]
+    }
+  ],
+
+  "relationships": [
+    {
+      "name": "listing.seller",
+      "from": { "entity": "listing", "field": "seller_user_id" },
+      "to": { "module_key": "core.identity", "entity": "user", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "restrict"
+    }
+  ],
+
+  "events": [
+    {
+      "name": "listing.created",
+      "schema": {
+        "listing_id": "uuid",
+        "seller_user_id": "uuid",
+        "occurred_at": "timestamptz"
+      }
+    }
+  ]
+}
+
+2) The “Blueprint Registry” SQL database (stores + versions these blueprints)
+
+This is the database to run personal tool. It stores modules, versions, configs, and optionally compiled outputs (SQL).
+
+Core tables (DDL
+-- 1) Module identity
+CREATE TABLE blueprint_modules (
+  id              uuid PRIMARY KEY,
+  module_key      text NOT NULL UNIQUE,        -- e.g. "marketplace.core"
+  name            text NOT NULL,
+  description     text,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now()
+);
+
+-- 2) Module versions (immutable)
+CREATE TABLE blueprint_versions (
+  id              uuid PRIMARY KEY,
+  module_id       uuid NOT NULL REFERENCES blueprint_modules(id),
+  version         text NOT NULL,               -- "1.0.0"
+  blueprint_json  jsonb NOT NULL,              -- full blueprint document
+  checksum        text NOT NULL,               -- hash for integrity
+  is_deprecated   boolean NOT NULL DEFAULT false,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (module_id, version)
+);
+
+-- 3) Dependency graph per version (denormalized from JSON for quick resolution)
+CREATE TABLE blueprint_dependencies (
+  id                    uuid PRIMARY KEY,
+  blueprint_version_id   uuid NOT NULL REFERENCES blueprint_versions(id) ON DELETE CASCADE,
+  depends_on_module_key  text NOT NULL,
+  version_range          text NOT NULL,
+  optional              boolean NOT NULL DEFAULT false
+);
+
+-- 4) Named “packs” (a project’s chosen set of modules + config)
+CREATE TABLE blueprint_packs (
+  id              uuid PRIMARY KEY,
+  pack_key        text NOT NULL UNIQUE,        -- e.g. "my-marketplace-ai"
+  name            text NOT NULL,
+  description     text,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE pack_modules (
+  id              uuid PRIMARY KEY,
+  pack_id         uuid NOT NULL REFERENCES blueprint_packs(id) ON DELETE CASCADE,
+  module_key      text NOT NULL,
+  version         text NOT NULL,               -- pinned version
+  sort_order      int NOT NULL DEFAULT 0,
+  UNIQUE (pack_id, module_key)
+);
+
+-- 5) Pack config (the resolved config inputs you pass to generator)
+CREATE TABLE pack_config (
+  id              uuid PRIMARY KEY,
+  pack_id         uuid NOT NULL REFERENCES blueprint_packs(id) ON DELETE CASCADE,
+  config_json     jsonb NOT NULL,              -- e.g. { "multi_tenant": true, ... }
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+
+-- 6) Build outputs (compiled artifacts)
+CREATE TABLE pack_builds (
+  id              uuid PRIMARY KEY,
+  pack_id         uuid NOT NULL REFERENCES blueprint_packs(id) ON DELETE CASCADE,
+  build_number    int NOT NULL,
+  resolved_manifest jsonb NOT NULL,            -- dependency-resolved, conditions applied
+  sql_migration   text NOT NULL,               -- generated SQL
+  generated_at    timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (pack_id, build_number)
+);
+
+
+This gives you:
+	•	Versioned blueprints (immutable)
+	•	Dependency resolution tables (fast)
+	•	“Pack” concept for real projects
+	•	Stored generated SQL migrations and manifests
+
+⸻
+
+3) “Runtime schema” SQL for AI-native attach points (what generated DB includes)
+
+When blueprints include AI capabilities + attach points, I want the generator to optionally include these universal tables.
+
+AI Core (module: ai.core)
+
+CREATE TABLE ai_runs (
+  id              uuid PRIMARY KEY,
+  entity_type     text NOT NULL,   -- "listings"
+  entity_id       uuid NOT NULL,
+  capability_key  text NOT NULL,   -- "semantic_search" / "content_enhancement"
+  model           text NOT NULL,
+  input_payload   jsonb NOT NULL,
+  output_payload  jsonb,
+  status          text NOT NULL,   -- "queued"|"success"|"error"
+  cost_usd        numeric(12,6),
+  latency_ms      int,
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE ai_feedback (
+  id          uuid PRIMARY KEY,
+  ai_run_id   uuid NOT NULL REFERENCES ai_runs(id) ON DELETE CASCADE,
+  rating      int,          -- e.g. 1..5
+  correction  text,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+-- For embedding targets (semantic search)
+CREATE TABLE embeddings (
+  id            uuid PRIMARY KEY,
+  entity_type   text NOT NULL,     -- "listings"
+  entity_id     uuid NOT NULL,
+  model         text NOT NULL,
+  vector        bytea NOT NULL,    -- store as bytea, or use pgvector if you choose
+  metadata      jsonb,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX embeddings_entity_idx ON embeddings(entity_type, entity_id);
+
+Attach points (files/comments) as universal modules
+
+Attachments module
+CREATE TABLE files (
+  id          uuid PRIMARY KEY,
+  storage_key text NOT NULL,
+  mime_type   text,
+  size_bytes  bigint,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE entity_files (
+  id          uuid PRIMARY KEY,
+  entity_type text NOT NULL,
+  entity_id   uuid NOT NULL,
+  file_id     uuid NOT NULL REFERENCES files(id) ON DELETE CASCADE,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX entity_files_entity_idx ON entity_files(entity_type, entity_id);
+
+Comments module
+CREATE TABLE comment_threads (
+  id          uuid PRIMARY KEY,
+  entity_type text NOT NULL,
+  entity_id   uuid NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE comments (
+  id          uuid PRIMARY KEY,
+  thread_id   uuid NOT NULL REFERENCES comment_threads(id) ON DELETE CASCADE,
+  author_id   uuid,
+  body        text NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX comment_threads_entity_idx ON comment_threads(entity_type, entity_id);
+
+4) Events layer (module: core.events) for automation + MCP-friendly integration
+
+This is the “backbone” for internal automation tools.
+
+CREATE TABLE events (
+  id            uuid PRIMARY KEY,
+  event_name    text NOT NULL,           -- "listing.created"
+  entity_type   text,
+  entity_id     uuid,
+  payload       jsonb NOT NULL,
+  occurred_at   timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX events_name_time_idx ON events(event_name, occurred_at);
+CREATE INDEX events_entity_idx ON events(entity_type, entity_id);
+
+CREATE TABLE event_subscriptions (
+  id              uuid PRIMARY KEY,
+  subscriber_key  text NOT NULL,         -- "automation.workflow_engine" or "ai.agent_router"
+  event_name      text NOT NULL,
+  filter_json     jsonb,                 -- optional filtering rules
+  is_enabled      boolean NOT NULL DEFAULT true,
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE event_deliveries (
+  id                uuid PRIMARY KEY,
+  event_id           uuid NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  subscription_id    uuid NOT NULL REFERENCES event_subscriptions(id) ON DELETE CASCADE,
+  status             text NOT NULL,       -- "pending"|"delivered"|"failed"
+  attempts           int NOT NULL DEFAULT 0,
+  last_error         text,
+  delivered_at       timestamptz
+);
+
+This supports:
+	•	workflow triggers
+	•	AI agent triggers
+	•	audit trails
+
+5) How the MCP Server uses this (practical contract)
+
+Your MCP server typically needs three things:
+
+A) Read blueprint modules
+	•	GET /blueprints/modules
+	•	GET /blueprints/module/{module_key}/versions
+	•	GET /blueprints/version/{id} (returns JSON)
+
+B) Build a pack (resolve dependencies + apply config)
+	•	POST /packs (create pack)
+	•	POST /packs/{pack_key}/build (produces resolved manifest + SQL migration)
+
+C) Publish runtime metadata for no-code UI
+
+From the resolved manifest, emit:
+	•	entities list (table names, fields, types)
+	•	relationships graph
+	•	events catalog (event names + payload schema)
+	•	attach points
+	•	ai capabilities enabled
+
+That metadata becomes your “No-code backend model layer.”
+
+6) A “starter module set” for your use cases (what to create first)
+
+If you want to cover internal automation tools, marketplaces, AI products, I’d create these modules in order:
+
+Core
+	•	core.identity (users/orgs/memberships/rbac)
+	•	core.audit (activity log / entity changes)
+	•	core.events (event bus tables)
+	•	core.attachments (files + entity_files)
+	•	core.comments (comment_threads + comments)
+
+Automation
+	•	automation.workflow (workflow definitions + instances + transitions)
+	•	automation.rules (if/then rule triggers on events)
+
+Marketplace
+	•	marketplace.core (listings/orders/payments/payouts/reviews)
+	•	marketplace.messaging (optional)
+
+AI
+	•	ai.core (ai_runs/feedback/embeddings)
+	•	ai.retrieval (collections/index metadata, if you want)
+	•	ai.agents (agent configs, tools, memory links)
+
+Each module has:
+	•	dependencies
+	•	options
+	•	attach points
+	•	events
+	•	AI capabilities (optional) as declared
+
+⸻
+
+7) The “resolved manifest” (what your generator produces)
+
+Your build step should output a single JSON manifest with:
+	•	final entities/fields after conditions
+	•	final relationships (FKs)
+	•	final event catalog
+	•	final attach points
+	•	final AI capabilities enabled
+	•	migration SQL
+
+This resolved manifest is what no-code backend and MCP server can rely on as “truth.”
+
+Ready blueprint JSON modules (v1.0.0) for:
+	1.	core.identity
+	2.	core.events
+	3.	ai.core
+	4.	automation.workflow
+	5.	marketplace.core
+
+They all follow the same format and are designed to compose cleanly in a relational SQL generator.
+
+1) core.identity (users, orgs, memberships, RBAC)
+{
+  "module": {
+    "key": "core.identity",
+    "name": "Core Identity",
+    "version": "1.0.0",
+    "description": "Users, organizations, memberships, RBAC. Multi-tenant friendly."
+  },
+  "dependencies": [],
+  "config": {
+    "options": {
+      "multi_tenant": { "type": "boolean", "default": true },
+      "rbac_enabled": { "type": "boolean", "default": true },
+      "email_login_enabled": { "type": "boolean", "default": true },
+      "soft_delete": { "type": "boolean", "default": true }
+    }
+  },
+  "entities": [
+    {
+      "name": "user",
+      "table": "users",
+      "description": "Human user account.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "email", "type": "varchar(320)", "nullable": false, "unique": true, "when": "config.email_login_enabled == true" },
+        { "name": "display_name", "type": "varchar(120)", "nullable": true },
+        { "name": "status", "type": "varchar(30)", "nullable": false, "default": "'active'" },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" },
+        { "name": "updated_at", "type": "timestamptz", "nullable": false, "default": "now()" },
+        { "name": "deleted_at", "type": "timestamptz", "nullable": true, "when": "config.soft_delete == true" }
+      ],
+      "indexes": [{ "columns": ["status"] }]
+    },
+    {
+      "name": "organization",
+      "table": "organizations",
+      "description": "Tenant / workspace. Optional if you run single-tenant apps.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "name", "type": "varchar(200)", "nullable": false },
+        { "name": "slug", "type": "varchar(200)", "nullable": true, "unique": true },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" },
+        { "name": "updated_at", "type": "timestamptz", "nullable": false, "default": "now()" },
+        { "name": "deleted_at", "type": "timestamptz", "nullable": true, "when": "config.soft_delete == true" }
+      ],
+      "when": "config.multi_tenant == true"
+    },
+    {
+      "name": "membership",
+      "table": "organization_memberships",
+      "description": "Links users to organizations with a membership status.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "organization_id", "type": "uuid", "nullable": false },
+        { "name": "user_id", "type": "uuid", "nullable": false },
+        { "name": "member_role", "type": "varchar(60)", "nullable": false, "default": "'member'" },
+        { "name": "status", "type": "varchar(30)", "nullable": false, "default": "'active'" },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [
+        { "columns": ["organization_id"] },
+        { "columns": ["user_id"] },
+        { "columns": ["organization_id", "user_id"], "unique": true }
+      ],
+      "when": "config.multi_tenant == true"
+    },
+    {
+      "name": "role",
+      "table": "roles",
+      "description": "Named role (RBAC). Scope can be org-wide or global depending on multi_tenant.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "organization_id", "type": "uuid", "nullable": true, "when": "config.multi_tenant == true" },
+        { "name": "key", "type": "varchar(100)", "nullable": false },
+        { "name": "name", "type": "varchar(140)", "nullable": false },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [{ "columns": ["organization_id", "key"], "unique": true, "when": "config.multi_tenant == true" }],
+      "when": "config.rbac_enabled == true"
+    },
+    {
+      "name": "permission",
+      "table": "permissions",
+      "description": "Atomic permission key (RBAC).",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "key", "type": "varchar(140)", "nullable": false, "unique": true },
+        { "name": "description", "type": "text", "nullable": true }
+      ],
+      "when": "config.rbac_enabled == true"
+    },
+    {
+      "name": "role_permission",
+      "table": "role_permissions",
+      "description": "Join table for role -> permission.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "role_id", "type": "uuid", "nullable": false },
+        { "name": "permission_id", "type": "uuid", "nullable": false }
+      ],
+      "indexes": [{ "columns": ["role_id", "permission_id"], "unique": true }],
+      "when": "config.rbac_enabled == true"
+    },
+    {
+      "name": "user_role",
+      "table": "user_roles",
+      "description": "Assign role to a user (optionally scoped to org).",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "organization_id", "type": "uuid", "nullable": true, "when": "config.multi_tenant == true" },
+        { "name": "user_id", "type": "uuid", "nullable": false },
+        { "name": "role_id", "type": "uuid", "nullable": false }
+      ],
+      "indexes": [{ "columns": ["organization_id", "user_id", "role_id"], "unique": true, "when": "config.multi_tenant == true" }],
+      "when": "config.rbac_enabled == true"
+    }
+  ],
+  "relationships": [
+    {
+      "name": "membership.organization",
+      "from": { "entity": "membership", "field": "organization_id" },
+      "to": { "module_key": "core.identity", "entity": "organization", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade",
+      "when": "config.multi_tenant == true"
+    },
+    {
+      "name": "membership.user",
+      "from": { "entity": "membership", "field": "user_id" },
+      "to": { "module_key": "core.identity", "entity": "user", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade",
+      "when": "config.multi_tenant == true"
+    },
+    {
+      "name": "role_permission.role",
+      "from": { "entity": "role_permission", "field": "role_id" },
+      "to": { "module_key": "core.identity", "entity": "role", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade",
+      "when": "config.rbac_enabled == true"
+    },
+    {
+      "name": "role_permission.permission",
+      "from": { "entity": "role_permission", "field": "permission_id" },
+      "to": { "module_key": "core.identity", "entity": "permission", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade",
+      "when": "config.rbac_enabled == true"
+    },
+    {
+      "name": "user_role.user",
+      "from": { "entity": "user_role", "field": "user_id" },
+      "to": { "module_key": "core.identity", "entity": "user", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade",
+      "when": "config.rbac_enabled == true"
+    },
+    {
+      "name": "user_role.role",
+      "from": { "entity": "user_role", "field": "role_id" },
+      "to": { "module_key": "core.identity", "entity": "role", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade",
+      "when": "config.rbac_enabled == true"
+    }
+  ],
+  "events": [
+    { "name": "user.created", "schema": { "user_id": "uuid", "occurred_at": "timestamptz" } },
+    { "name": "organization.created", "schema": { "organization_id": "uuid", "occurred_at": "timestamptz" } }
+  ]
+}
+
+2) core.events (event bus + subscriptions + delivery tracking)
+{
+  "module": {
+    "key": "core.events",
+    "name": "Core Events",
+    "version": "1.0.0",
+    "description": "Event bus tables for automation, AI triggers, and audit-friendly integration."
+  },
+  "dependencies": [],
+  "config": {
+    "options": {
+      "store_event_entity_refs": { "type": "boolean", "default": true }
+    }
+  },
+  "entities": [
+    {
+      "name": "event",
+      "table": "events",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "event_name", "type": "text", "nullable": false },
+        { "name": "entity_type", "type": "text", "nullable": true, "when": "config.store_event_entity_refs == true" },
+        { "name": "entity_id", "type": "uuid", "nullable": true, "when": "config.store_event_entity_refs == true" },
+        { "name": "payload", "type": "jsonb", "nullable": false },
+        { "name": "occurred_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [
+        { "columns": ["event_name", "occurred_at"] },
+        { "columns": ["entity_type", "entity_id"], "when": "config.store_event_entity_refs == true" }
+      ]
+    },
+    {
+      "name": "event_subscription",
+      "table": "event_subscriptions",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "subscriber_key", "type": "text", "nullable": false },
+        { "name": "event_name", "type": "text", "nullable": false },
+        { "name": "filter_json", "type": "jsonb", "nullable": true },
+        { "name": "is_enabled", "type": "boolean", "nullable": false, "default": "true" },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [{ "columns": ["subscriber_key", "event_name"], "unique": true }]
+    },
+    {
+      "name": "event_delivery",
+      "table": "event_deliveries",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "event_id", "type": "uuid", "nullable": false },
+        { "name": "subscription_id", "type": "uuid", "nullable": false },
+        { "name": "status", "type": "varchar(20)", "nullable": false, "default": "'pending'" },
+        { "name": "attempts", "type": "int", "nullable": false, "default": "0" },
+        { "name": "last_error", "type": "text", "nullable": true },
+        { "name": "delivered_at", "type": "timestamptz", "nullable": true }
+      ],
+      "indexes": [
+        { "columns": ["status"] },
+        { "columns": ["event_id"] },
+        { "columns": ["subscription_id"] }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "event_delivery.event",
+      "from": { "entity": "event_delivery", "field": "event_id" },
+      "to": { "module_key": "core.events", "entity": "event", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    },
+    {
+      "name": "event_delivery.subscription",
+      "from": { "entity": "event_delivery", "field": "subscription_id" },
+      "to": { "module_key": "core.events", "entity": "event_subscription", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    }
+  ],
+  "events": []
+}
+
+3) ai.core (ai_runs, feedback, embeddings, suggestions)
+{
+  "module": {
+    "key": "ai.core",
+    "name": "AI Core",
+    "version": "1.0.0",
+    "description": "AI run tracking, embeddings store, feedback loop, AI suggestions. Designed to attach to any entity via (entity_type, entity_id)."
+  },
+  "dependencies": [
+    { "module_key": "core.events", "version_range": "^1.0.0", "optional": true }
+  ],
+  "config": {
+    "options": {
+      "embeddings_enabled": { "type": "boolean", "default": true },
+      "suggestions_enabled": { "type": "boolean", "default": true },
+      "default_embedding_model": { "type": "string", "default": "text-embedding-3-large" },
+      "store_vectors_as": { "type": "string", "default": "bytea", "enum": ["bytea", "pgvector"] }
+    }
+  },
+  "entities": [
+    {
+      "name": "ai_run",
+      "table": "ai_runs",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "entity_type", "type": "text", "nullable": false },
+        { "name": "entity_id", "type": "uuid", "nullable": false },
+        { "name": "capability_key", "type": "text", "nullable": false },
+        { "name": "model", "type": "text", "nullable": false },
+        { "name": "input_payload", "type": "jsonb", "nullable": false },
+        { "name": "output_payload", "type": "jsonb", "nullable": true },
+        { "name": "status", "type": "varchar(20)", "nullable": false, "default": "'queued'" },
+        { "name": "cost_usd", "type": "numeric(12,6)", "nullable": true },
+        { "name": "latency_ms", "type": "int", "nullable": true },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [
+        { "columns": ["entity_type", "entity_id"] },
+        { "columns": ["capability_key"] },
+        { "columns": ["status"] }
+      ],
+      "events": [
+        { "name": "ai.run.created", "emit_on": "insert" },
+        { "name": "ai.run.completed", "emit_on": "update", "when": "NEW.status IN ('success','error')" }
+      ]
+    },
+    {
+      "name": "ai_feedback",
+      "table": "ai_feedback",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "ai_run_id", "type": "uuid", "nullable": false },
+        { "name": "rating", "type": "int", "nullable": true },
+        { "name": "correction", "type": "text", "nullable": true },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [{ "columns": ["ai_run_id"] }]
+    },
+    {
+      "name": "embedding",
+      "table": "embeddings",
+      "when": "config.embeddings_enabled == true",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "entity_type", "type": "text", "nullable": false },
+        { "name": "entity_id", "type": "uuid", "nullable": false },
+        { "name": "model", "type": "text", "nullable": false, "default": "config.default_embedding_model" },
+        { "name": "vector", "type": "bytea", "nullable": false, "when": "config.store_vectors_as == 'bytea'" },
+        { "name": "vector", "type": "vector", "nullable": false, "when": "config.store_vectors_as == 'pgvector'" },
+        { "name": "metadata", "type": "jsonb", "nullable": true },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [{ "columns": ["entity_type", "entity_id"] }]
+    },
+    {
+      "name": "ai_suggestion",
+      "table": "ai_suggestions",
+      "when": "config.suggestions_enabled == true",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "entity_type", "type": "text", "nullable": false },
+        { "name": "entity_id", "type": "uuid", "nullable": false },
+        { "name": "suggestion_type", "type": "text", "nullable": false },
+        { "name": "content", "type": "text", "nullable": false },
+        { "name": "confidence", "type": "numeric(5,4)", "nullable": true },
+        { "name": "status", "type": "varchar(20)", "nullable": false, "default": "'open'" },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [
+        { "columns": ["entity_type", "entity_id"] },
+        { "columns": ["suggestion_type"] },
+        { "columns": ["status"] }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "ai_feedback.ai_run",
+      "from": { "entity": "ai_feedback", "field": "ai_run_id" },
+      "to": { "module_key": "ai.core", "entity": "ai_run", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    }
+  ],
+  "attach_points": [
+    {
+      "name": "ai.embedding_target",
+      "kind": "embedding_target",
+      "description": "Any entity can declare this attach point; the generator uses embeddings(entity_type, entity_id)."
+    }
+  ],
+  "events": [
+    { "name": "ai.run.created", "schema": { "ai_run_id": "uuid", "entity_type": "text", "entity_id": "uuid", "occurred_at": "timestamptz" } },
+    { "name": "ai.run.completed", "schema": { "ai_run_id": "uuid", "status": "text", "occurred_at": "timestamptz" } }
+  ]
+}
+
+4) automation.workflow (workflow engine + triggers + actions)
+{
+  "module": {
+    "key": "automation.workflow",
+    "name": "Automation Workflow",
+    "version": "1.0.0",
+    "description": "State machine workflows, instances, triggers, and actions. Subscribes to events to drive automation."
+  },
+  "dependencies": [
+    { "module_key": "core.events", "version_range": "^1.0.0" },
+    { "module_key": "core.identity", "version_range": "^1.0.0", "optional": true },
+    { "module_key": "ai.core", "version_range": "^1.0.0", "optional": true }
+  ],
+  "config": {
+    "options": {
+      "multi_tenant": { "type": "boolean", "default": true },
+      "workflow_assignments_enabled": { "type": "boolean", "default": true },
+      "ai_routing_enabled": { "type": "boolean", "default": false }
+    }
+  },
+  "entities": [
+    {
+      "name": "workflow",
+      "table": "workflows",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "organization_id", "type": "uuid", "nullable": false, "when": "config.multi_tenant == true" },
+        { "name": "key", "type": "varchar(140)", "nullable": false },
+        { "name": "name", "type": "varchar(200)", "nullable": false },
+        { "name": "description", "type": "text", "nullable": true },
+        { "name": "is_enabled", "type": "boolean", "nullable": false, "default": "true" },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [
+        { "columns": ["organization_id", "key"], "unique": true, "when": "config.multi_tenant == true" },
+        { "columns": ["key"], "unique": true, "when": "config.multi_tenant == false" }
+      ]
+    },
+    {
+      "name": "workflow_state",
+      "table": "workflow_states",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "workflow_id", "type": "uuid", "nullable": false },
+        { "name": "key", "type": "varchar(140)", "nullable": false },
+        { "name": "name", "type": "varchar(200)", "nullable": false },
+        { "name": "is_terminal", "type": "boolean", "nullable": false, "default": "false" }
+      ],
+      "indexes": [{ "columns": ["workflow_id", "key"], "unique": true }]
+    },
+    {
+      "name": "workflow_transition",
+      "table": "workflow_transitions",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "workflow_id", "type": "uuid", "nullable": false },
+        { "name": "from_state_id", "type": "uuid", "nullable": false },
+        { "name": "to_state_id", "type": "uuid", "nullable": false },
+        { "name": "condition_json", "type": "jsonb", "nullable": true },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [{ "columns": ["workflow_id", "from_state_id"] }]
+    },
+    {
+      "name": "workflow_instance",
+      "table": "workflow_instances",
+      "description": "A workflow applied to an entity (entity_type/entity_id).",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "workflow_id", "type": "uuid", "nullable": false },
+        { "name": "organization_id", "type": "uuid", "nullable": false, "when": "config.multi_tenant == true" },
+        { "name": "entity_type", "type": "text", "nullable": false },
+        { "name": "entity_id", "type": "uuid", "nullable": false },
+        { "name": "current_state_id", "type": "uuid", "nullable": false },
+        { "name": "status", "type": "varchar(30)", "nullable": false, "default": "'active'" },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" },
+        { "name": "updated_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [
+        { "columns": ["organization_id", "entity_type", "entity_id"], "when": "config.multi_tenant == true" },
+        { "columns": ["entity_type", "entity_id"] }
+      ],
+      "events": [
+        { "name": "workflow.instance.created", "emit_on": "insert" },
+        { "name": "workflow.instance.state_changed", "emit_on": "update", "when": "NEW.current_state_id <> OLD.current_state_id" }
+      ],
+      "attach_points": [
+        { "name": "comments", "kind": "comment_thread" },
+        { "name": "ai.routing", "kind": "ai_agent_target", "when": "config.ai_routing_enabled == true" }
+      ],
+      "ai_capabilities": [
+        {
+          "key": "intelligent_routing",
+          "requires": ["ai.core.ai_runs"],
+          "when": "config.ai_routing_enabled == true",
+          "prompts": [{ "key": "workflow.route", "purpose": "Suggest next state / assignee based on context" }]
+        }
+      ]
+    },
+    {
+      "name": "workflow_trigger",
+      "table": "workflow_triggers",
+      "description": "Subscribes a workflow to an event name (e.g., 'order.created').",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "workflow_id", "type": "uuid", "nullable": false },
+        { "name": "event_name", "type": "text", "nullable": false },
+        { "name": "filter_json", "type": "jsonb", "nullable": true },
+        { "name": "is_enabled", "type": "boolean", "nullable": false, "default": "true" },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [{ "columns": ["workflow_id", "event_name"], "unique": true }]
+    },
+    {
+      "name": "workflow_action",
+      "table": "workflow_actions",
+      "description": "Actions executed on transition/state entry, including webhooks, DB updates, or AI calls.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "workflow_id", "type": "uuid", "nullable": false },
+        { "name": "state_id", "type": "uuid", "nullable": true },
+        { "name": "transition_id", "type": "uuid", "nullable": true },
+        { "name": "action_type", "type": "varchar(60)", "nullable": false },
+        { "name": "config_json", "type": "jsonb", "nullable": false },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [{ "columns": ["workflow_id"] }]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "workflow_state.workflow",
+      "from": { "entity": "workflow_state", "field": "workflow_id" },
+      "to": { "module_key": "automation.workflow", "entity": "workflow", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    },
+    {
+      "name": "workflow_transition.workflow",
+      "from": { "entity": "workflow_transition", "field": "workflow_id" },
+      "to": { "module_key": "automation.workflow", "entity": "workflow", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    },
+    {
+      "name": "workflow_instance.workflow",
+      "from": { "entity": "workflow_instance", "field": "workflow_id" },
+      "to": { "module_key": "automation.workflow", "entity": "workflow", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    },
+    {
+      "name": "workflow_instance.current_state",
+      "from": { "entity": "workflow_instance", "field": "current_state_id" },
+      "to": { "module_key": "automation.workflow", "entity": "workflow_state", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "restrict"
+    },
+    {
+      "name": "workflow_trigger.workflow",
+      "from": { "entity": "workflow_trigger", "field": "workflow_id" },
+      "to": { "module_key": "automation.workflow", "entity": "workflow", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    },
+    {
+      "name": "workflow_action.workflow",
+      "from": { "entity": "workflow_action", "field": "workflow_id" },
+      "to": { "module_key": "automation.workflow", "entity": "workflow", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    }
+  ],
+  "events": [
+    { "name": "workflow.instance.created", "schema": { "workflow_instance_id": "uuid", "occurred_at": "timestamptz" } },
+    { "name": "workflow.instance.state_changed", "schema": { "workflow_instance_id": "uuid", "from_state_id": "uuid", "to_state_id": "uuid", "occurred_at": "timestamptz" } }
+  ]
+}
+
+5) marketplace.core (listings, orders, payments, reviews) + AI attach points
+
+{
+  "module": {
+    "key": "marketplace.core",
+    "name": "Marketplace Core",
+    "version": "1.0.0",
+    "description": "Listings, orders, order items, payments, reviews. Emits events. Supports AI hooks (semantic search, enrichment, fraud signals)."
+  },
+  "dependencies": [
+    { "module_key": "core.identity", "version_range": "^1.0.0" },
+    { "module_key": "core.events", "version_range": "^1.0.0", "optional": true },
+    { "module_key": "ai.core", "version_range": "^1.0.0", "optional": true }
+  ],
+  "config": {
+    "options": {
+      "multi_tenant": { "type": "boolean", "default": true },
+      "soft_delete": { "type": "boolean", "default": true },
+      "currency": { "type": "string", "default": "USD" },
+      "reviews_enabled": { "type": "boolean", "default": true },
+      "payments_enabled": { "type": "boolean", "default": true },
+      "ai_semantic_search_enabled": { "type": "boolean", "default": true },
+      "ai_fraud_scoring_enabled": { "type": "boolean", "default": false }
+    }
+  },
+  "entities": [
+    {
+      "name": "listing",
+      "table": "listings",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "organization_id", "type": "uuid", "nullable": false, "when": "config.multi_tenant == true" },
+        { "name": "seller_user_id", "type": "uuid", "nullable": false },
+        { "name": "title", "type": "varchar(200)", "nullable": false },
+        { "name": "description", "type": "text", "nullable": true },
+        { "name": "price_cents", "type": "int", "nullable": false },
+        { "name": "currency", "type": "varchar(3)", "nullable": false, "default": "config.currency" },
+        { "name": "status", "type": "varchar(30)", "nullable": false, "default": "'active'" },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" },
+        { "name": "updated_at", "type": "timestamptz", "nullable": false, "default": "now()" },
+        { "name": "deleted_at", "type": "timestamptz", "nullable": true, "when": "config.soft_delete == true" }
+      ],
+      "indexes": [
+        { "columns": ["seller_user_id"] },
+        { "columns": ["organization_id"], "when": "config.multi_tenant == true" },
+        { "columns": ["status"] }
+      ],
+      "events": [
+        { "name": "listing.created", "emit_on": "insert" },
+        { "name": "listing.updated", "emit_on": "update" }
+      ],
+      "attach_points": [
+        { "name": "files", "kind": "attachment" },
+        { "name": "comments", "kind": "comment_thread" },
+        { "name": "ai.semantic_search", "kind": "embedding_target", "when": "config.ai_semantic_search_enabled == true" }
+      ],
+      "ai_capabilities": [
+        {
+          "key": "semantic_search",
+          "requires": ["ai.core.embedding"],
+          "when": "config.ai_semantic_search_enabled == true",
+          "embedding": { "text_fields": ["title", "description"], "model_default": "text-embedding-3-large" }
+        },
+        {
+          "key": "content_enhancement",
+          "requires": ["ai.core.ai_run"],
+          "prompts": [{ "key": "listing.rewrite", "purpose": "Rewrite listing description for clarity & conversion" }]
+        }
+      ]
+    },
+    {
+      "name": "order",
+      "table": "orders",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "organization_id", "type": "uuid", "nullable": false, "when": "config.multi_tenant == true" },
+        { "name": "buyer_user_id", "type": "uuid", "nullable": false },
+        { "name": "status", "type": "varchar(30)", "nullable": false, "default": "'pending'" },
+        { "name": "subtotal_cents", "type": "int", "nullable": false, "default": "0" },
+        { "name": "total_cents", "type": "int", "nullable": false, "default": "0" },
+        { "name": "currency", "type": "varchar(3)", "nullable": false, "default": "config.currency" },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" },
+        { "name": "updated_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [
+        { "columns": ["buyer_user_id"] },
+        { "columns": ["organization_id"], "when": "config.multi_tenant == true" },
+        { "columns": ["status"] }
+      ],
+      "events": [
+        { "name": "order.created", "emit_on": "insert" },
+        { "name": "order.updated", "emit_on": "update" }
+      ],
+      "ai_capabilities": [
+        {
+          "key": "fraud_scoring",
+          "requires": ["ai.core.ai_run"],
+          "when": "config.ai_fraud_scoring_enabled == true",
+          "prompts": [{ "key": "order.fraud_score", "purpose": "Return fraud risk score and reasons" }]
+        }
+      ]
+    },
+    {
+      "name": "order_item",
+      "table": "order_items",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "order_id", "type": "uuid", "nullable": false },
+        { "name": "listing_id", "type": "uuid", "nullable": false },
+        { "name": "quantity", "type": "int", "nullable": false, "default": "1" },
+        { "name": "unit_price_cents", "type": "int", "nullable": false },
+        { "name": "line_total_cents", "type": "int", "nullable": false }
+      ],
+      "indexes": [{ "columns": ["order_id"] }, { "columns": ["listing_id"] }]
+    },
+    {
+      "name": "payment",
+      "table": "payments",
+      "when": "config.payments_enabled == true",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "order_id", "type": "uuid", "nullable": false },
+        { "name": "provider", "type": "varchar(60)", "nullable": false, "default": "'stripe'" },
+        { "name": "provider_payment_id", "type": "text", "nullable": true },
+        { "name": "amount_cents", "type": "int", "nullable": false },
+        { "name": "currency", "type": "varchar(3)", "nullable": false, "default": "config.currency" },
+        { "name": "status", "type": "varchar(30)", "nullable": false, "default": "'initiated'" },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [{ "columns": ["order_id"] }, { "columns": ["status"] }],
+      "events": [
+        { "name": "payment.created", "emit_on": "insert" },
+        { "name": "payment.updated", "emit_on": "update" }
+      ]
+    },
+    {
+      "name": "review",
+      "table": "reviews",
+      "when": "config.reviews_enabled == true",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "listing_id", "type": "uuid", "nullable": false },
+        { "name": "author_user_id", "type": "uuid", "nullable": false },
+        { "name": "rating", "type": "int", "nullable": false },
+        { "name": "body", "type": "text", "nullable": true },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [{ "columns": ["listing_id"] }, { "columns": ["author_user_id"] }],
+      "events": [{ "name": "review.created", "emit_on": "insert" }],
+      "attach_points": [
+        { "name": "ai.semantic_search", "kind": "embedding_target", "when": "config.ai_semantic_search_enabled == true" }
+      ],
+      "ai_capabilities": [
+        {
+          "key": "semantic_search",
+          "requires": ["ai.core.embedding"],
+          "when": "config.ai_semantic_search_enabled == true",
+          "embedding": { "text_fields": ["body"], "model_default": "text-embedding-3-large" }
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "listing.seller",
+      "from": { "entity": "listing", "field": "seller_user_id" },
+      "to": { "module_key": "core.identity", "entity": "user", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "restrict"
+    },
+    {
+      "name": "order.buyer",
+      "from": { "entity": "order", "field": "buyer_user_id" },
+      "to": { "module_key": "core.identity", "entity": "user", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "restrict"
+    },
+    {
+      "name": "order_item.order",
+      "from": { "entity": "order_item", "field": "order_id" },
+      "to": { "module_key": "marketplace.core", "entity": "order", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    },
+    {
+      "name": "order_item.listing",
+      "from": { "entity": "order_item", "field": "listing_id" },
+      "to": { "module_key": "marketplace.core", "entity": "listing", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "restrict"
+    },
+    {
+      "name": "payment.order",
+      "from": { "entity": "payment", "field": "order_id" },
+      "to": { "module_key": "marketplace.core", "entity": "order", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade",
+      "when": "config.payments_enabled == true"
+    },
+    {
+      "name": "review.listing",
+      "from": { "entity": "review", "field": "listing_id" },
+      "to": { "module_key": "marketplace.core", "entity": "listing", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade",
+      "when": "config.reviews_enabled == true"
+    },
+    {
+      "name": "review.author",
+      "from": { "entity": "review", "field": "author_user_id" },
+      "to": { "module_key": "core.identity", "entity": "user", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "restrict",
+      "when": "config.reviews_enabled == true"
+    }
+  ],
+  "events": [
+    { "name": "listing.created", "schema": { "listing_id": "uuid", "seller_user_id": "uuid", "occurred_at": "timestamptz" } },
+    { "name": "order.created", "schema": { "order_id": "uuid", "buyer_user_id": "uuid", "occurred_at": "timestamptz" } },
+    { "name": "payment.updated", "schema": { "payment_id": "uuid", "status": "text", "occurred_at": "timestamptz" } }
+  ]
+}
+
+
+
+Below is a production-ready Pack Definition for:
+
+Marketplace + Workflow + AI
+Multi-tenant, AI-native, automation-ready
+
+This includes:
+	1.	Pack metadata
+	2.	Module list (dependency-resolved order)
+	3.	Pinned versions
+	4.	Final resolved configuration
+	5.	Expected resolved capability summary
+	6.	Suggested build number = 1
+
+insert this directly into your blueprint_packs, pack_modules, and pack_config tables — or treat it as the request payload to MCP server build endpoint.
+
+
+PACK: marketplace.ai.workflow.v1
+
+ Pack Metadata
+
+{
+  "pack_key": "marketplace.ai.workflow.v1",
+  "name": "Marketplace + Workflow + AI",
+  "description": "Multi-tenant AI-native marketplace with workflow automation and event-driven architecture.",
+  "build_number": 1
+}
+
+Module Composition (Dependency Ordered)
+
+Order matters for FK resolution and generator layering.
+{
+  "modules": [
+    { "module_key": "core.identity", "version": "1.0.0", "sort_order": 1 },
+    { "module_key": "core.events", "version": "1.0.0", "sort_order": 2 },
+    { "module_key": "ai.core", "version": "1.0.0", "sort_order": 3 },
+    { "module_key": "automation.workflow", "version": "1.0.0", "sort_order": 4 },
+    { "module_key": "marketplace.core", "version": "1.0.0", "sort_order": 5 }
+  ]
+}
+
+Final Resolved Configuration
+
+All module configs flattened into a single pack-level config.
+
+{
+  "config": {
+
+    "multi_tenant": true,
+    "soft_delete": true,
+
+    "rbac_enabled": true,
+    "email_login_enabled": true,
+
+    "store_event_entity_refs": true,
+
+    "embeddings_enabled": true,
+    "suggestions_enabled": true,
+    "default_embedding_model": "text-embedding-3-large",
+    "store_vectors_as": "bytea",
+
+    "workflow_assignments_enabled": true,
+    "ai_routing_enabled": true,
+
+    "currency": "USD",
+    "reviews_enabled": true,
+    "payments_enabled": true,
+    "ai_semantic_search_enabled": true,
+    "ai_fraud_scoring_enabled": true
+  }
+}
+
+This results in:
+	•	Multi-tenant marketplace
+	•	AI semantic search on listings & reviews
+	•	AI fraud scoring on orders
+	•	AI-assisted workflow routing
+	•	Full RBAC
+	•	Event-driven automation
+
+
+What This Pack Enables (Resolved System Capabilities)
+
+After dependency resolution + condition evaluation, the system will include:
+
+
+
+Identity Layer
+	•	users
+	•	organizations
+	•	memberships
+	•	roles
+	•	permissions
+	•	user_roles
+
+⸻
+
+ Event Bus
+	•	events
+	•	event_subscriptions
+	•	event_deliveries
+
+Everything emits domain events.
+
+⸻
+
+ AI Core
+	•	ai_runs
+	•	ai_feedback
+	•	embeddings
+	•	ai_suggestions
+
+Attachable to:
+	•	listings
+	•	reviews
+	•	orders
+	•	workflow_instances
+
+⸻
+
+ Workflow Engine
+	•	workflows
+	•	workflow_states
+	•	workflow_transitions
+	•	workflow_instances
+	•	workflow_triggers
+	•	workflow_actions
+
+Supports:
+	•	Event-based triggers
+	•	AI-assisted routing
+	•	Entity-bound workflows
+
+⸻
+
+ Marketplace Core
+	•	listings
+	•	orders
+	•	order_items
+	•	payments
+	•	reviews
+
+With:
+	•	AI semantic search
+	•	AI fraud scoring
+	•	Content enhancement
+	•	Attachments
+	•	Comments
+	•	Workflow support
+
+⸻
+
+ Cross-Module AI Attach Points Enabled
+
+Because AI is enabled globally:
+
+Listings
+	•	Embedding target
+	•	Content rewrite
+	•	Semantic search
+
+Reviews
+	•	Embedding target
+
+Orders
+	•	Fraud scoring
+
+Workflow Instances
+	•	Intelligent routing
+
+⸻
+
+ Example Event Flows Enabled
+
+Example 1: Order Fraud Automation
+	1.	order.created
+	2.	AI fraud scoring triggered
+	3.	If risk > threshold:
+	•	Create workflow_instance
+	•	Move to “manual_review”
+	•	Notify reviewer
+
+⸻
+
+Example 2: Listing Optimization
+	1.	listing.created
+	2.	AI generates improved description
+	3.	Suggestion stored
+	4.	Seller accepts → update listing
+
+⸻
+
+Example 3: Automated Fulfillment
+	1.	payment.updated → status=success
+	2.	Workflow transition to “paid”
+	3.	Emit order.paid
+	4.	Trigger fulfillment system
+
+⸻
+
+ Resolved Table Count (Approx)
+
+This pack generates roughly:
+	•	Identity: ~7 tables
+	•	Events: 3 tables
+	•	AI: 4 tables
+	•	Workflow: ~7 tables
+	•	Marketplace: 5 tables
+
+Total: ~26 tables
+All relational, fully FK connected.
+
+⸻
+
+ Example pack_builds.resolved_manifest Shape
+
+MCP server should generate something like:
+
+{
+  "entities": [...final flattened entities...],
+  "relationships": [...final FK graph...],
+  "events": [...all domain + system events...],
+  "attach_points": [...entity attach definitions...],
+  "ai_capabilities": [...capabilities per entity...],
+  "config_applied": {...},
+  "module_versions": {...}
+}
+
+This Is Now A Production-Grade AI-Native Backend
+
+This pack supports:
+	•	AI-enhanced marketplace
+	•	AI-augmented workflow automation
+	•	Event-driven architecture
+	•	No-code builder compatibility
+	•	MCP server schema introspection
+	•	Multi-tenant SaaS
+	•	Extensible modular upgrades
+
+
+This Is Now A Production-Grade AI-Native Backend
+
+This pack supports:
+	•	AI-enhanced marketplace
+	•	AI-augmented workflow automation
+	•	Event-driven architecture
+	•	No-code builder compatibility
+	•	MCP server schema introspection
+	•	Multi-tenant SaaS
+	•	Extensible modular upgrades
+
+Below is a core system design that guarantees you can generate:
+	•	AI-first CRMs
+	•	AI-first ticketing systems
+	•	Intelligent internal automation
+	•	AI-augmented SaaS tools
+	•	…and anything else you dream up
+
+…and then I’ll give you packs for each of the four.
+
+⸻
+
+The Core System I Need (so creativity stays unlimited)
+
+Core Modules (always-on building blocks)
+
+These make “any app” possible:
+	1.	core.identity
+	2.	core.events
+	3.	core.attachments (polymorphic attachments)
+	4.	core.comments (polymorphic comment threads)
+	5.	core.audit (change log + activity log)
+	6.	core.tags (tagging + labeling)
+	7.	core.custom_fields (dynamic fields per entity)
+	8.	core.statuses (generic status/state catalog)
+
+AI Modules (attachable to any entity)
+	9.	ai.core (runs, embeddings, feedback, suggestions)
+	10.	ai.agents (agent configs, tool registry, memory links)
+	11.	ai.retrieval (collections + sources + chunk links, optional)
+
+Automation Modules (event-driven + workflow)
+	12.	automation.workflow
+	13.	automation.rules (event→conditions→actions)
+	14.	automation.scheduler (cron-like schedules, optional)
+	15.	automation.integrations (webhooks/outbound calls, optional)
+
+Domain Modules (optional “apps”)
+	•	crm.core
+	•	ticketing.core
+	•	saas.core
+	•	internal.ops (assets, approvals, requests, etc.)
+
+Why this stays creative:
+Because generator becomes entity-centric, and any new idea is just:
+	•	define entities
+	•	add relationships
+	•	declare events
+	•	add attach points
+	•	enable AI capabilities
+	•	wire automation rules
+
+No special-case “CRM logic” required.
+
+⸻
+
+The Missing Superpower: core.custom_fields + core.statuses
+
+These two are what makes no-code + creativity explode.
+
+core.custom_fields concept
+	•	You can attach arbitrary fields to any entity without schema rewrites.
+	•	Generator still supports “real columns” for core fields, but you can prototype fast.
+
+core.statuses concept
+	•	Every entity can have status/state without bespoke tables.
+	•	Or you can upgrade to real workflow later.
+
+⸻
+
+
+All packs assume your core modules exist. 
+
+Each pack includes:
+	•	modules (dependency ordered)
+	•	pack config defaults (AI-first)
+	•	what it generates
+
+⸻
+
+ PACK 1: AI-first CRM
+
+Pack key
+
+crm.ai_first.v1
+
+Modules (ordered)
+
+{
+  "modules": [
+    { "module_key": "core.identity", "version": "1.0.0", "sort_order": 1 },
+    { "module_key": "core.events", "version": "1.0.0", "sort_order": 2 },
+    { "module_key": "ai.core", "version": "1.0.0", "sort_order": 3 },
+    { "module_key": "automation.workflow", "version": "1.0.0", "sort_order": 4 },
+
+    { "module_key": "core.attachments", "version": "1.0.0", "sort_order": 5 },
+    { "module_key": "core.comments", "version": "1.0.0", "sort_order": 6 },
+    { "module_key": "core.audit", "version": "1.0.0", "sort_order": 7 },
+    { "module_key": "core.tags", "version": "1.0.0", "sort_order": 8 },
+    { "module_key": "core.custom_fields", "version": "1.0.0", "sort_order": 9 },
+
+    { "module_key": "crm.core", "version": "1.0.0", "sort_order": 10 }
+  ]
+}
+
+What “AI-first CRM” means in schema terms
+	•	CRM entities: accounts, contacts, leads, opportunities, activities, notes
+	•	AI attach points:
+	•	embeddings for notes/emails/call logs
+	•	lead scoring runs
+	•	next-best-action suggestions
+	•	semantic search over customer history
+
+⸻
+
+ PACK 2: AI-first Ticketing System
+
+Pack key
+
+ticketing.ai_first.v1
+
+Modules
+
+{
+  "modules": [
+    { "module_key": "core.identity", "version": "1.0.0", "sort_order": 1 },
+    { "module_key": "core.events", "version": "1.0.0", "sort_order": 2 },
+    { "module_key": "ai.core", "version": "1.0.0", "sort_order": 3 },
+    { "module_key": "automation.workflow", "version": "1.0.0", "sort_order": 4 },
+
+    { "module_key": "core.attachments", "version": "1.0.0", "sort_order": 5 },
+    { "module_key": "core.comments", "version": "1.0.0", "sort_order": 6 },
+    { "module_key": "core.audit", "version": "1.0.0", "sort_order": 7 },
+    { "module_key": "core.tags", "version": "1.0.0", "sort_order": 8 },
+    { "module_key": "core.custom_fields", "version": "1.0.0", "sort_order": 9 },
+
+    { "module_key": "ticketing.core", "version": "1.0.0", "sort_order": 10 }
+  ]
+}
+
+Config defaults
+
+{
+  "config": {
+    "multi_tenant": true,
+    "soft_delete": true,
+    "rbac_enabled": true,
+
+    "embeddings_enabled": true,
+    "suggestions_enabled": true,
+    "ai_semantic_search_enabled": true,
+
+    "ai_auto_triage_enabled": true,
+    "ai_priority_prediction_enabled": true,
+    "ai_intent_classification_enabled": true,
+    "ai_agent_assist_enabled": true,
+
+    "ai_routing_enabled": true
+  }
+}
+
+AI-first ticketing behaviors
+	•	ticket embeddings from subject/body/comments
+	•	AI triage suggestions: category, priority, assignment group
+	•	suggested responses (stored as ai_suggestions)
+	•	anomaly detection for SLA risk (as AI runs)
+
+⸻
+
+ PACK 3: Intelligent Internal Automation Platform
+
+Pack key
+
+internal_automation.intelligent.v1
+
+Modules
+{
+  "modules": [
+    { "module_key": "core.identity", "version": "1.0.0", "sort_order": 1 },
+    { "module_key": "core.events", "version": "1.0.0", "sort_order": 2 },
+    { "module_key": "automation.workflow", "version": "1.0.0", "sort_order": 3 },
+    { "module_key": "ai.core", "version": "1.0.0", "sort_order": 4 },
+
+    { "module_key": "core.audit", "version": "1.0.0", "sort_order": 5 },
+    { "module_key": "core.custom_fields", "version": "1.0.0", "sort_order": 6 },
+    { "module_key": "core.tags", "version": "1.0.0", "sort_order": 7 },
+
+    { "module_key": "automation.rules", "version": "1.0.0", "sort_order": 8 },
+    { "module_key": "automation.scheduler", "version": "1.0.0", "sort_order": 9 },
+    { "module_key": "automation.integrations", "version": "1.0.0", "sort_order": 10 },
+
+    { "module_key": "internal.ops", "version": "1.0.0", "sort_order": 11 }
+  ]
+}
+
+Config defaults
+{
+  "config": {
+    "multi_tenant": true,
+    "rbac_enabled": true,
+
+    "store_event_entity_refs": true,
+
+    "ai_routing_enabled": true,
+    "ai_anomaly_detection_enabled": true,
+    "ai_document_summarization_enabled": true,
+
+    "rules_enabled": true,
+    "scheduler_enabled": true,
+    "integrations_enabled": true
+  }
+}
+
+What it generates
+	•	event-driven rules engine
+	•	workflow engine
+	•	scheduling + webhook/action modules
+	•	AI-run tracking + suggestions used for routing, summarization, anomaly flags
+
+⸻
+
+ PACK 4: AI-augmented SaaS Tools (generic “SaaS app skeleton”)
+
+Pack key
+
+saas.ai_augmented.v1
+
+Modules
+{
+  "modules": [
+    { "module_key": "core.identity", "version": "1.0.0", "sort_order": 1 },
+    { "module_key": "core.events", "version": "1.0.0", "sort_order": 2 },
+
+    { "module_key": "core.audit", "version": "1.0.0", "sort_order": 3 },
+    { "module_key": "core.tags", "version": "1.0.0", "sort_order": 4 },
+    { "module_key": "core.custom_fields", "version": "1.0.0", "sort_order": 5 },
+    { "module_key": "core.attachments", "version": "1.0.0", "sort_order": 6 },
+    { "module_key": "core.comments", "version": "1.0.0", "sort_order": 7 },
+
+    { "module_key": "ai.core", "version": "1.0.0", "sort_order": 8 },
+    { "module_key": "automation.workflow", "version": "1.0.0", "sort_order": 9 },
+
+    { "module_key": "saas.core", "version": "1.0.0", "sort_order": 10 }
+  ]
+}
+
+Config defaults
+{
+  "config": {
+    "multi_tenant": true,
+    "soft_delete": true,
+    "rbac_enabled": true,
+
+    "embeddings_enabled": true,
+    "suggestions_enabled": true,
+    "ai_semantic_search_enabled": true,
+    "ai_assistant_enabled": true,
+
+    "ai_routing_enabled": false
+  }
+}
+
+The Key Guarantee: To Stay Unlimited
+
+To ensure I can generate anything I invent later, enforce these core rules in my blueprint system:
+
+Rule A — Every entity can be AI-enabled without schema changes
+
+Because AI attaches via:
+	•	entity_type, entity_id
+	•	optional embeddings
+	•	suggestions
+	•	ai_runs
+
+Rule B — Every entity can be automated without bespoke code
+
+Because everything can:
+	•	emit events
+	•	be targeted by workflows
+	•	be targeted by rules
+
+Rule C — Every entity can become “no-code flexible”
+
+Because you include:
+	•	core.custom_fields
+	•	core.tags
+	•	core.comments
+	•	core.attachments
+
+So even if my creative idea is weird, I won’t be blocked by schema rigidity.
+
+
+These are the missing core modules that unlock unlimited creativity in my system.
+
+These are foundational.
+Once these exist, I can build anything on top without redesigning schema.
+
+Generate:
+	•	core.attachments
+	•	core.comments
+	•	core.audit
+	•	core.tags
+	•	core.custom_fields
+	•	core.statuses
+
+All in the same blueprint format.
+
+⸻
+
+core.attachments
+
+Polymorphic file attachment system.
+{
+  "module": {
+    "key": "core.attachments",
+    "name": "Core Attachments",
+    "version": "1.0.0",
+    "description": "Polymorphic file attachment system attachable to any entity via (entity_type, entity_id)."
+  },
+  "dependencies": [],
+  "config": {
+    "options": {
+      "file_versioning_enabled": { "type": "boolean", "default": true }
+    }
+  },
+  "entities": [
+    {
+      "name": "file",
+      "table": "files",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "storage_key", "type": "text", "nullable": false },
+        { "name": "filename", "type": "text", "nullable": true },
+        { "name": "mime_type", "type": "varchar(200)", "nullable": true },
+        { "name": "size_bytes", "type": "bigint", "nullable": true },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ]
+    },
+    {
+      "name": "entity_file",
+      "table": "entity_files",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "entity_type", "type": "text", "nullable": false },
+        { "name": "entity_id", "type": "uuid", "nullable": false },
+        { "name": "file_id", "type": "uuid", "nullable": false },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [
+        { "columns": ["entity_type", "entity_id"] },
+        { "columns": ["file_id"] }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "entity_file.file",
+      "from": { "entity": "entity_file", "field": "file_id" },
+      "to": { "module_key": "core.attachments", "entity": "file", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    }
+  ],
+  "attach_points": [
+    { "name": "files", "kind": "attachment" }
+  ],
+  "events": [
+    { "name": "file.uploaded", "schema": { "file_id": "uuid", "occurred_at": "timestamptz" } }
+  ]
+}
+
+
+core.comments
+
+Threaded polymorphic comments.
+{
+  "module": {
+    "key": "core.comments",
+    "name": "Core Comments",
+    "version": "1.0.0",
+    "description": "Polymorphic comment threads attachable to any entity."
+  },
+  "dependencies": [
+    { "module_key": "core.identity", "version_range": "^1.0.0", "optional": true }
+  ],
+  "config": { "options": {} },
+  "entities": [
+    {
+      "name": "comment_thread",
+      "table": "comment_threads",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "entity_type", "type": "text", "nullable": false },
+        { "name": "entity_id", "type": "uuid", "nullable": false },
+        { "name": "created_at", "type": "timestamptz", "default": "now()", "nullable": false }
+      ],
+      "indexes": [
+        { "columns": ["entity_type", "entity_id"], "unique": true }
+      ]
+    },
+    {
+      "name": "comment",
+      "table": "comments",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "thread_id", "type": "uuid", "nullable": false },
+        { "name": "author_id", "type": "uuid", "nullable": true },
+        { "name": "body", "type": "text", "nullable": false },
+        { "name": "created_at", "type": "timestamptz", "default": "now()", "nullable": false }
+      ],
+      "indexes": [{ "columns": ["thread_id"] }]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "comment.thread",
+      "from": { "entity": "comment", "field": "thread_id" },
+      "to": { "module_key": "core.comments", "entity": "comment_thread", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    }
+  ],
+  "attach_points": [
+    { "name": "comments", "kind": "comment_thread" }
+  ]
+}
+
+core.audit
+
+Tracks activity + entity changes (critical for serious systems).
+{
+  "module": {
+    "key": "core.audit",
+    "name": "Core Audit",
+    "version": "1.0.0",
+    "description": "Entity change log and activity tracking."
+  },
+  "dependencies": [],
+  "config": {
+    "options": {
+      "store_diff": { "type": "boolean", "default": true }
+    }
+  },
+  "entities": [
+    {
+      "name": "activity_log",
+      "table": "activity_logs",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "entity_type", "type": "text", "nullable": true },
+        { "name": "entity_id", "type": "uuid", "nullable": true },
+        { "name": "actor_id", "type": "uuid", "nullable": true },
+        { "name": "action", "type": "text", "nullable": false },
+        { "name": "metadata", "type": "jsonb", "nullable": true },
+        { "name": "created_at", "type": "timestamptz", "default": "now()", "nullable": false }
+      ],
+      "indexes": [
+        { "columns": ["entity_type", "entity_id"] },
+        { "columns": ["actor_id"] }
+      ]
+    },
+    {
+      "name": "entity_change",
+      "table": "entity_changes",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "entity_type", "type": "text", "nullable": false },
+        { "name": "entity_id", "type": "uuid", "nullable": false },
+        { "name": "change_type", "type": "varchar(20)", "nullable": false },
+        { "name": "diff_json", "type": "jsonb", "nullable": true, "when": "config.store_diff == true" },
+        { "name": "created_at", "type": "timestamptz", "default": "now()", "nullable": false }
+      ],
+      "indexes": [{ "columns": ["entity_type", "entity_id"] }]
+    }
+  ]
+}
+
+
+core.tags
+
+Generic tagging system.
+{
+  "module": {
+    "key": "core.tags",
+    "name": "Core Tags",
+    "version": "1.0.0",
+    "description": "Generic tagging system for any entity."
+  },
+  "dependencies": [],
+  "config": { "options": {} },
+  "entities": [
+    {
+      "name": "tag",
+      "table": "tags",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "name", "type": "varchar(120)", "nullable": false },
+        { "name": "color", "type": "varchar(20)", "nullable": true }
+      ],
+      "indexes": [{ "columns": ["name"], "unique": true }]
+    },
+    {
+      "name": "entity_tag",
+      "table": "entity_tags",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "entity_type", "type": "text", "nullable": false },
+        { "name": "entity_id", "type": "uuid", "nullable": false },
+        { "name": "tag_id", "type": "uuid", "nullable": false }
+      ],
+      "indexes": [
+        { "columns": ["entity_type", "entity_id"] },
+        { "columns": ["entity_type", "entity_id", "tag_id"], "unique": true }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "entity_tag.tag",
+      "from": { "entity": "entity_tag", "field": "tag_id" },
+      "to": { "module_key": "core.tags", "entity": "tag", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    }
+  ]
+}
+
+core.custom_fields
+
+No-code dynamic fields engine.
+{
+  "module": {
+    "key": "core.custom_fields",
+    "name": "Core Custom Fields",
+    "version": "1.0.0",
+    "description": "Dynamic custom fields for any entity (no-code flexibility)."
+  },
+  "dependencies": [],
+  "config": { "options": {} },
+  "entities": [
+    {
+      "name": "custom_field_definition",
+      "table": "custom_field_definitions",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "entity_type", "type": "text", "nullable": false },
+        { "name": "field_key", "type": "varchar(140)", "nullable": false },
+        { "name": "field_type", "type": "varchar(50)", "nullable": false },
+        { "name": "config_json", "type": "jsonb", "nullable": true }
+      ],
+      "indexes": [
+        { "columns": ["entity_type", "field_key"], "unique": true }
+      ]
+    },
+    {
+      "name": "custom_field_value",
+      "table": "custom_field_values",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "entity_type", "type": "text", "nullable": false },
+        { "name": "entity_id", "type": "uuid", "nullable": false },
+        { "name": "field_definition_id", "type": "uuid", "nullable": false },
+        { "name": "value_json", "type": "jsonb", "nullable": true }
+      ],
+      "indexes": [
+        { "columns": ["entity_type", "entity_id"] }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "custom_field_value.definition",
+      "from": { "entity": "custom_field_value", "field": "field_definition_id" },
+      "to": { "module_key": "core.custom_fields", "entity": "custom_field_definition", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    }
+  ]
+}
+
+
+core.statuses
+
+Generic status catalog for lightweight state management.
+
+{
+  "module": {
+    "key": "core.statuses",
+    "name": "Core Statuses",
+    "version": "1.0.0",
+    "description": "Generic status catalog attachable to any entity."
+  },
+  "dependencies": [],
+  "config": { "options": {} },
+  "entities": [
+    {
+      "name": "status_definition",
+      "table": "status_definitions",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "entity_type", "type": "text", "nullable": false },
+        { "name": "status_key", "type": "varchar(100)", "nullable": false },
+        { "name": "name", "type": "varchar(200)", "nullable": false },
+        { "name": "is_terminal", "type": "boolean", "nullable": false, "default": "false" }
+      ],
+      "indexes": [
+        { "columns": ["entity_type", "status_key"], "unique": true }
+      ]
+    }
+  ],
+  "attach_points": [
+    { "name": "status", "kind": "status_catalog" }
+  ]
+}
+
+With these modules:
+	•	Any entity can:
+	•	Have files
+	•	Have comments
+	•	Have tags
+	•	Have custom fields
+	•	Have statuses
+	•	Be audited
+	•	Emit events
+	•	Be AI-augmented
+	•	Be workflow-driven
+
+This guarantees creativity is not boxed in by schema rigidity
+
+These are the domain modules that sit on top of my core + AI + automation foundation.
+
+They are:
+	•	crm.core
+	•	ticketing.core
+	•	saas.core
+	•	internal.ops
+
+All are:
+	•	Multi-tenant compatible
+	•	Event-emitting
+	•	AI-attachable
+	•	Workflow-ready
+	•	No-code extensible (custom fields, tags, comments, etc.)
+
+crm.core
+AI-First CRM domain model.
+{
+  "module": {
+    "key": "crm.core",
+    "name": "CRM Core",
+    "version": "1.0.0",
+    "description": "Accounts, contacts, leads, opportunities, activities. Designed for AI-first CRM workflows."
+  },
+  "dependencies": [
+    { "module_key": "core.identity", "version_range": "^1.0.0" },
+    { "module_key": "core.events", "version_range": "^1.0.0", "optional": true },
+    { "module_key": "ai.core", "version_range": "^1.0.0", "optional": true }
+  ],
+  "config": {
+    "options": {
+      "multi_tenant": { "type": "boolean", "default": true },
+      "lead_scoring_enabled": { "type": "boolean", "default": true },
+      "ai_next_best_action_enabled": { "type": "boolean", "default": true }
+    }
+  },
+  "entities": [
+    {
+      "name": "account",
+      "table": "crm_accounts",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "organization_id", "type": "uuid", "nullable": false, "when": "config.multi_tenant == true" },
+        { "name": "name", "type": "varchar(200)", "nullable": false },
+        { "name": "industry", "type": "varchar(120)", "nullable": true },
+        { "name": "created_at", "type": "timestamptz", "default": "now()", "nullable": false }
+      ],
+      "events": [{ "name": "crm.account.created", "emit_on": "insert" }],
+      "attach_points": [
+        { "name": "comments", "kind": "comment_thread" },
+        { "name": "files", "kind": "attachment" }
+      ]
+    },
+    {
+      "name": "contact",
+      "table": "crm_contacts",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "account_id", "type": "uuid", "nullable": true },
+        { "name": "first_name", "type": "varchar(120)", "nullable": false },
+        { "name": "last_name", "type": "varchar(120)", "nullable": false },
+        { "name": "email", "type": "varchar(320)", "nullable": true },
+        { "name": "phone", "type": "varchar(50)", "nullable": true },
+        { "name": "created_at", "type": "timestamptz", "default": "now()", "nullable": false }
+      ],
+      "attach_points": [
+        { "name": "ai.semantic_search", "kind": "embedding_target" }
+      ]
+    },
+    {
+      "name": "lead",
+      "table": "crm_leads",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "source", "type": "varchar(120)", "nullable": true },
+        { "name": "status", "type": "varchar(50)", "nullable": false, "default": "'new'" },
+        { "name": "score", "type": "numeric(5,2)", "nullable": true, "when": "config.lead_scoring_enabled == true" },
+        { "name": "created_at", "type": "timestamptz", "default": "now()", "nullable": false }
+      ],
+      "ai_capabilities": [
+        {
+          "key": "lead_scoring",
+          "requires": ["ai.core.ai_run"],
+          "when": "config.lead_scoring_enabled == true"
+        }
+      ],
+      "events": [{ "name": "crm.lead.created", "emit_on": "insert" }]
+    },
+    {
+      "name": "opportunity",
+      "table": "crm_opportunities",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "account_id", "type": "uuid", "nullable": false },
+        { "name": "value_cents", "type": "int", "nullable": true },
+        { "name": "stage", "type": "varchar(100)", "nullable": false },
+        { "name": "close_date", "type": "date", "nullable": true }
+      ],
+      "events": [{ "name": "crm.opportunity.updated", "emit_on": "update" }]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "contact.account",
+      "from": { "entity": "contact", "field": "account_id" },
+      "to": { "module_key": "crm.core", "entity": "account", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "set_null"
+    }
+  ]
+}
+
+ ticketing.core
+
+AI-First Ticketing System.
+{
+  "module": {
+    "key": "ticketing.core",
+    "name": "Ticketing Core",
+    "version": "1.0.0",
+    "description": "Support tickets with AI triage, routing, and SLA management."
+  },
+  "dependencies": [
+    { "module_key": "core.identity", "version_range": "^1.0.0" },
+    { "module_key": "ai.core", "version_range": "^1.0.0", "optional": true },
+    { "module_key": "core.events", "version_range": "^1.0.0", "optional": true }
+  ],
+  "config": {
+    "options": {
+      "multi_tenant": { "type": "boolean", "default": true },
+      "ai_auto_triage_enabled": { "type": "boolean", "default": true }
+    }
+  },
+  "entities": [
+    {
+      "name": "ticket",
+      "table": "tickets",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "organization_id", "type": "uuid", "nullable": false, "when": "config.multi_tenant == true" },
+        { "name": "requester_id", "type": "uuid", "nullable": true },
+        { "name": "subject", "type": "varchar(200)", "nullable": false },
+        { "name": "description", "type": "text", "nullable": false },
+        { "name": "priority", "type": "varchar(50)", "nullable": false, "default": "'normal'" },
+        { "name": "status", "type": "varchar(50)", "nullable": false, "default": "'open'" },
+        { "name": "created_at", "type": "timestamptz", "default": "now()", "nullable": false }
+      ],
+      "attach_points": [
+        { "name": "comments", "kind": "comment_thread" },
+        { "name": "files", "kind": "attachment" },
+        { "name": "ai.semantic_search", "kind": "embedding_target" }
+      ],
+      "ai_capabilities": [
+        {
+          "key": "auto_triage",
+          "requires": ["ai.core.ai_run"],
+          "when": "config.ai_auto_triage_enabled == true"
+        }
+      ],
+      "events": [
+        { "name": "ticket.created", "emit_on": "insert" },
+        { "name": "ticket.updated", "emit_on": "update" }
+      ]
+    }
+  ]
+}
+
+saas.core
+
+Generic AI-augmentable SaaS application core.
+{
+  "module": {
+    "key": "saas.core",
+    "name": "SaaS Core",
+    "version": "1.0.0",
+    "description": "Generic SaaS application scaffolding with projects and resources."
+  },
+  "dependencies": [
+    { "module_key": "core.identity", "version_range": "^1.0.0" }
+  ],
+  "config": {
+    "options": {
+      "multi_tenant": { "type": "boolean", "default": true }
+    }
+  },
+  "entities": [
+    {
+      "name": "project",
+      "table": "saas_projects",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "organization_id", "type": "uuid", "nullable": false, "when": "config.multi_tenant == true" },
+        { "name": "name", "type": "varchar(200)", "nullable": false },
+        { "name": "created_at", "type": "timestamptz", "default": "now()", "nullable": false }
+      ]
+    },
+    {
+      "name": "resource",
+      "table": "saas_resources",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "project_id", "type": "uuid", "nullable": false },
+        { "name": "type", "type": "varchar(100)", "nullable": false },
+        { "name": "data_json", "type": "jsonb", "nullable": true },
+        { "name": "created_at", "type": "timestamptz", "default": "now()", "nullable": false }
+      ],
+      "attach_points": [
+        { "name": "ai.semantic_search", "kind": "embedding_target" }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "resource.project",
+      "from": { "entity": "resource", "field": "project_id" },
+      "to": { "module_key": "saas.core", "entity": "project", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    }
+  ]
+}
+
+internal.ops
+
+Internal operations + approvals + requests.
+
+Complete AI-Native Blueprint Ecosystem
+
+ now possess:
+	•	Core polymorphic systems
+	•	AI augmentation layer
+	•	Workflow engine
+	•	Automation primitives
+	•	CRM
+	•	Ticketing
+	•	SaaS
+	•	Internal Ops
+	•	Marketplace (from earlier)
+
+ system can now generate:
+	•	AI-first CRM
+	•	AI-first Ticketing
+	•	AI SaaS apps
+	•	Intelligent internal automation
+	•	AI marketplaces
+	•	Or entirely new systems
+
+The automation.rules, automation.scheduler, and automation.integrations modules
+
+1A) automation.rules (event → conditions → actions)
+{
+  "module": {
+    "key": "automation.rules",
+    "name": "Automation Rules",
+    "version": "1.0.0",
+    "description": "Event-driven rules: triggers, conditions, actions, executions. Works with core.events and can call AI via ai.core."
+  },
+  "dependencies": [
+    { "module_key": "core.events", "version_range": "^1.0.0" },
+    { "module_key": "core.identity", "version_range": "^1.0.0", "optional": true },
+    { "module_key": "ai.core", "version_range": "^1.0.0", "optional": true }
+  ],
+  "config": {
+    "options": {
+      "multi_tenant": { "type": "boolean", "default": true },
+      "max_attempts_default": { "type": "int", "default": 5 },
+      "dead_letter_enabled": { "type": "boolean", "default": true }
+    }
+  },
+  "entities": [
+    {
+      "name": "rule",
+      "table": "automation_rules",
+      "description": "High-level automation rule triggered by an event_name.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "organization_id", "type": "uuid", "nullable": false, "when": "config.multi_tenant == true" },
+        { "name": "name", "type": "varchar(200)", "nullable": false },
+        { "name": "event_name", "type": "text", "nullable": false },
+        { "name": "filter_json", "type": "jsonb", "nullable": true, "description": "Quick prefilter on event payload." },
+        { "name": "is_enabled", "type": "boolean", "nullable": false, "default": "true" },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" },
+        { "name": "updated_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [
+        { "columns": ["organization_id", "event_name"], "when": "config.multi_tenant == true" },
+        { "columns": ["event_name"] }
+      ]
+    },
+    {
+      "name": "rule_condition",
+      "table": "automation_rule_conditions",
+      "description": "ANDed conditions evaluated against event payload/context. Use JSON logic or a small DSL.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "rule_id", "type": "uuid", "nullable": false },
+        { "name": "condition_type", "type": "varchar(60)", "nullable": false, "default": "'json_logic'" },
+        { "name": "expression_json", "type": "jsonb", "nullable": false }
+      ],
+      "indexes": [{ "columns": ["rule_id"] }]
+    },
+    {
+      "name": "rule_action",
+      "table": "automation_rule_actions",
+      "description": "Ordered actions to execute if conditions pass. action_type selects an executor.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "rule_id", "type": "uuid", "nullable": false },
+        { "name": "sort_order", "type": "int", "nullable": false, "default": "0" },
+        { "name": "action_type", "type": "varchar(80)", "nullable": false },
+        { "name": "config_json", "type": "jsonb", "nullable": false, "description": "Executor-specific config; may reference event fields with templating." }
+      ],
+      "indexes": [{ "columns": ["rule_id", "sort_order"] }]
+    },
+    {
+      "name": "rule_execution",
+      "table": "automation_rule_executions",
+      "description": "An instance of a rule run for a specific event.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "rule_id", "type": "uuid", "nullable": false },
+        { "name": "event_id", "type": "uuid", "nullable": false },
+        { "name": "status", "type": "varchar(30)", "nullable": false, "default": "'queued'" },
+        { "name": "attempts", "type": "int", "nullable": false, "default": "0" },
+        { "name": "max_attempts", "type": "int", "nullable": false, "default": "config.max_attempts_default" },
+        { "name": "last_error", "type": "text", "nullable": true },
+        { "name": "started_at", "type": "timestamptz", "nullable": true },
+        { "name": "finished_at", "type": "timestamptz", "nullable": true },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [
+        { "columns": ["status"] },
+        { "columns": ["rule_id"] },
+        { "columns": ["event_id"] }
+      ],
+      "events": [
+        { "name": "automation.rule_execution.created", "emit_on": "insert" },
+        { "name": "automation.rule_execution.completed", "emit_on": "update", "when": "NEW.status IN ('success','failed','dead_letter')" }
+      ]
+    },
+    {
+      "name": "rule_execution_step",
+      "table": "automation_rule_execution_steps",
+      "description": "Per-action execution log for debugging and replay.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "execution_id", "type": "uuid", "nullable": false },
+        { "name": "rule_action_id", "type": "uuid", "nullable": false },
+        { "name": "status", "type": "varchar(30)", "nullable": false, "default": "'queued'" },
+        { "name": "input_json", "type": "jsonb", "nullable": true },
+        { "name": "output_json", "type": "jsonb", "nullable": true },
+        { "name": "error", "type": "text", "nullable": true },
+        { "name": "started_at", "type": "timestamptz", "nullable": true },
+        { "name": "finished_at", "type": "timestamptz", "nullable": true }
+      ],
+      "indexes": [
+        { "columns": ["execution_id"] },
+        { "columns": ["rule_action_id"] },
+        { "columns": ["status"] }
+      ]
+    },
+    {
+      "name": "dead_letter",
+      "table": "automation_dead_letters",
+      "when": "config.dead_letter_enabled == true",
+      "description": "Failed executions after max attempts; keep payload for diagnosis/retry.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "execution_id", "type": "uuid", "nullable": false },
+        { "name": "payload_json", "type": "jsonb", "nullable": false },
+        { "name": "reason", "type": "text", "nullable": true },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [{ "columns": ["execution_id"], "unique": true }]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "rule_condition.rule",
+      "from": { "entity": "rule_condition", "field": "rule_id" },
+      "to": { "module_key": "automation.rules", "entity": "rule", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    },
+    {
+      "name": "rule_action.rule",
+      "from": { "entity": "rule_action", "field": "rule_id" },
+      "to": { "module_key": "automation.rules", "entity": "rule", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    },
+    {
+      "name": "rule_execution.rule",
+      "from": { "entity": "rule_execution", "field": "rule_id" },
+      "to": { "module_key": "automation.rules", "entity": "rule", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    },
+    {
+      "name": "rule_execution.event",
+      "from": { "entity": "rule_execution", "field": "event_id" },
+      "to": { "module_key": "core.events", "entity": "event", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    },
+    {
+      "name": "rule_execution_step.execution",
+      "from": { "entity": "rule_execution_step", "field": "execution_id" },
+      "to": { "module_key": "automation.rules", "entity": "rule_execution", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    },
+    {
+      "name": "rule_execution_step.rule_action",
+      "from": { "entity": "rule_execution_step", "field": "rule_action_id" },
+      "to": { "module_key": "automation.rules", "entity": "rule_action", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "restrict"
+    },
+    {
+      "name": "dead_letter.execution",
+      "from": { "entity": "dead_letter", "field": "execution_id" },
+      "to": { "module_key": "automation.rules", "entity": "rule_execution", "field": "id" },
+      "cardinality": "one_to_one",
+      "on_delete": "cascade",
+      "when": "config.dead_letter_enabled == true"
+    }
+  ],
+  "events": [
+    { "name": "automation.rule_execution.created", "schema": { "execution_id": "uuid", "rule_id": "uuid", "occurred_at": "timestamptz" } },
+    { "name": "automation.rule_execution.completed", "schema": { "execution_id": "uuid", "status": "text", "occurred_at": "timestamptz" } }
+  ]
+}
+
+Need action_type executors (server implements these):
+	•	webhook.call
+	•	db.update / db.insert (safe, whitelisted tables/fields)
+	•	event.emit (write to events)
+	•	workflow.start / workflow.transition
+	•	ai.run (create row in ai_runs)
+	•	notification.send (if you later add notifications)
+
+1B) automation.scheduler (cron-like schedules → emits events / runs rules)
+{
+  "module": {
+    "key": "automation.scheduler",
+    "name": "Automation Scheduler",
+    "version": "1.0.0",
+    "description": "Scheduled jobs (cron/interval) that emit events and/or run actions. Enables time-based automation."
+  },
+  "dependencies": [
+    { "module_key": "core.events", "version_range": "^1.0.0" }
+  ],
+  "config": {
+    "options": {
+      "multi_tenant": { "type": "boolean", "default": true },
+      "default_timezone": { "type": "string", "default": "UTC" }
+    }
+  },
+  "entities": [
+    {
+      "name": "schedule",
+      "table": "automation_schedules",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "organization_id", "type": "uuid", "nullable": false, "when": "config.multi_tenant == true" },
+        { "name": "name", "type": "varchar(200)", "nullable": false },
+        { "name": "schedule_type", "type": "varchar(30)", "nullable": false, "default": "'cron'" },
+        { "name": "cron", "type": "varchar(200)", "nullable": true },
+        { "name": "interval_seconds", "type": "int", "nullable": true },
+        { "name": "timezone", "type": "varchar(60)", "nullable": false, "default": "config.default_timezone" },
+        { "name": "payload_template", "type": "jsonb", "nullable": true },
+        { "name": "event_name", "type": "text", "nullable": false, "default": "'scheduler.tick'" },
+        { "name": "is_enabled", "type": "boolean", "nullable": false, "default": "true" },
+        { "name": "next_run_at", "type": "timestamptz", "nullable": true },
+        { "name": "last_run_at", "type": "timestamptz", "nullable": true },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [
+        { "columns": ["is_enabled", "next_run_at"] },
+        { "columns": ["organization_id"], "when": "config.multi_tenant == true" }
+      ]
+    },
+    {
+      "name": "schedule_run",
+      "table": "automation_schedule_runs",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "schedule_id", "type": "uuid", "nullable": false },
+        { "name": "status", "type": "varchar(30)", "nullable": false, "default": "'started'" },
+        { "name": "event_id", "type": "uuid", "nullable": true, "description": "If this run emitted an event." },
+        { "name": "started_at", "type": "timestamptz", "nullable": false, "default": "now()" },
+        { "name": "finished_at", "type": "timestamptz", "nullable": true },
+        { "name": "last_error", "type": "text", "nullable": true }
+      ],
+      "indexes": [
+        { "columns": ["schedule_id"] },
+        { "columns": ["status"] }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "schedule_run.schedule",
+      "from": { "entity": "schedule_run", "field": "schedule_id" },
+      "to": { "module_key": "automation.scheduler", "entity": "schedule", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    },
+    {
+      "name": "schedule_run.event",
+      "from": { "entity": "schedule_run", "field": "event_id" },
+      "to": { "module_key": "core.events", "entity": "event", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "set_null"
+    }
+  ],
+  "events": [
+    { "name": "scheduler.tick", "schema": { "schedule_id": "uuid", "occurred_at": "timestamptz" } }
+  ]
+}
+
+1C) automation.integrations (connectors, credentials, webhooks, HTTP actions)
+
+This is what lets no-code tool connect to external systems safely.
+
+{
+  "module": {
+    "key": "automation.integrations",
+    "name": "Automation Integrations",
+    "version": "1.0.0",
+    "description": "Integration registry: connectors, credentials, inbound webhooks, outbound HTTP actions (safe templating)."
+  },
+  "dependencies": [
+    { "module_key": "core.identity", "version_range": "^1.0.0", "optional": true },
+    { "module_key": "core.events", "version_range": "^1.0.0", "optional": true }
+  ],
+  "config": {
+    "options": {
+      "multi_tenant": { "type": "boolean", "default": true },
+      "secrets_encrypted": { "type": "boolean", "default": true }
+    }
+  },
+  "entities": [
+    {
+      "name": "connector",
+      "table": "integration_connectors",
+      "description": "Connector types (Slack, Gmail, Stripe, GitHub).",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "key", "type": "varchar(140)", "nullable": false, "unique": true },
+        { "name": "name", "type": "varchar(200)", "nullable": false },
+        { "name": "capabilities_json", "type": "jsonb", "nullable": true }
+      ]
+    },
+    {
+      "name": "credential",
+      "table": "integration_credentials",
+      "description": "Stored auth material (token, apiKey). Store encrypted blob in secret_json.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "organization_id", "type": "uuid", "nullable": false, "when": "config.multi_tenant == true" },
+        { "name": "connector_id", "type": "uuid", "nullable": false },
+        { "name": "name", "type": "varchar(200)", "nullable": false },
+        { "name": "secret_json", "type": "jsonb", "nullable": false },
+        { "name": "is_enabled", "type": "boolean", "nullable": false, "default": "true" },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [
+        { "columns": ["organization_id"], "when": "config.multi_tenant == true" },
+        { "columns": ["connector_id"] }
+      ]
+    },
+    {
+      "name": "inbound_webhook",
+      "table": "integration_inbound_webhooks",
+      "description": "Public webhook endpoints that emit events into core.events.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "organization_id", "type": "uuid", "nullable": false, "when": "config.multi_tenant == true" },
+        { "name": "name", "type": "varchar(200)", "nullable": false },
+        { "name": "path_key", "type": "varchar(200)", "nullable": false, "unique": true },
+        { "name": "event_name", "type": "text", "nullable": false },
+        { "name": "secret", "type": "text", "nullable": true },
+        { "name": "is_enabled", "type": "boolean", "nullable": false, "default": "true" },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [{ "columns": ["event_name"] }]
+    },
+    {
+      "name": "http_action_template",
+      "table": "integration_http_action_templates",
+      "description": "Reusable outbound HTTP call template used by automation.rules actions.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "organization_id", "type": "uuid", "nullable": false, "when": "config.multi_tenant == true" },
+        { "name": "name", "type": "varchar(200)", "nullable": false },
+        { "name": "method", "type": "varchar(10)", "nullable": false, "default": "'POST'" },
+        { "name": "url_template", "type": "text", "nullable": false },
+        { "name": "headers_template", "type": "jsonb", "nullable": true },
+        { "name": "body_template", "type": "jsonb", "nullable": true },
+        { "name": "credential_id", "type": "uuid", "nullable": true },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [{ "columns": ["organization_id"], "when": "config.multi_tenant == true" }]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "credential.connector",
+      "from": { "entity": "credential", "field": "connector_id" },
+      "to": { "module_key": "automation.integrations", "entity": "connector", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "restrict"
+    },
+    {
+      "name": "http_action_template.credential",
+      "from": { "entity": "http_action_template", "field": "credential_id" },
+      "to": { "module_key": "automation.integrations", "entity": "credential", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "set_null"
+    }
+  ],
+  "events": [
+    { "name": "integration.webhook.received", "schema": { "webhook_id": "uuid", "occurred_at": "timestamptz" } }
+  ]
+}
+
+ai.agents module (tool registry + memory + task execution)
+
+This module makes AI a first-class actor that can:
+	•	have tools
+	•	have memory
+	•	run tasks
+	•	log reasoning artifacts safely (inputs/outputs)
+	•	be triggered by events/workflows/rules
+
+It complements ai.core (runs/embeddings/suggestions). Think of:
+	•	ai.core = instrumentation + primitives
+	•	ai.agents = operational “AI workers”
+
+{
+  "module": {
+    "key": "ai.agents",
+    "name": "AI Agents",
+    "version": "1.0.0",
+    "description": "Agent registry, tool registry, agent memory links, task queue/execution records. Designed for MCP tool calling."
+  },
+  "dependencies": [
+    { "module_key": "ai.core", "version_range": "^1.0.0" },
+    { "module_key": "core.events", "version_range": "^1.0.0", "optional": true },
+    { "module_key": "core.identity", "version_range": "^1.0.0", "optional": true }
+  ],
+  "config": {
+    "options": {
+      "multi_tenant": { "type": "boolean", "default": true },
+      "agent_task_max_attempts": { "type": "int", "default": 5 },
+      "memory_enabled": { "type": "boolean", "default": true }
+    }
+  },
+  "entities": [
+    {
+      "name": "tool",
+      "table": "ai_tools",
+      "description": "Callable tools. For MCP, these map to MCP tool definitions.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "key", "type": "varchar(200)", "nullable": false, "unique": true },
+        { "name": "name", "type": "varchar(200)", "nullable": false },
+        { "name": "description", "type": "text", "nullable": true },
+        { "name": "schema_json", "type": "jsonb", "nullable": true, "description": "JSON schema / OpenAPI-ish args schema." },
+        { "name": "executor_type", "type": "varchar(60)", "nullable": false, "default": "'mcp'" },
+        { "name": "config_json", "type": "jsonb", "nullable": true }
+      ]
+    },
+    {
+      "name": "agent",
+      "table": "ai_agents",
+      "description": "Agent configuration: instructions, model defaults, safety policy tags, tool access.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "organization_id", "type": "uuid", "nullable": false, "when": "config.multi_tenant == true" },
+        { "name": "key", "type": "varchar(200)", "nullable": false },
+        { "name": "name", "type": "varchar(200)", "nullable": false },
+        { "name": "model_default", "type": "varchar(200)", "nullable": false, "default": "'gpt-5'" },
+        { "name": "system_prompt", "type": "text", "nullable": true },
+        { "name": "config_json", "type": "jsonb", "nullable": true, "description": "Temperature, max tokens, etc." },
+        { "name": "is_enabled", "type": "boolean", "nullable": false, "default": "true" },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [
+        { "columns": ["organization_id", "key"], "unique": true, "when": "config.multi_tenant == true" },
+        { "columns": ["key"], "unique": true, "when": "config.multi_tenant == false" }
+      ]
+    },
+    {
+      "name": "agent_tool",
+      "table": "ai_agent_tools",
+      "description": "Tool allowlist per agent.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "agent_id", "type": "uuid", "nullable": false },
+        { "name": "tool_id", "type": "uuid", "nullable": false }
+      ],
+      "indexes": [{ "columns": ["agent_id", "tool_id"], "unique": true }]
+    },
+    {
+      "name": "agent_memory_item",
+      "table": "ai_agent_memory_items",
+      "when": "config.memory_enabled == true",
+      "description": "Long-term memory pointers for agents. Store content + optional embedding target link.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "agent_id", "type": "uuid", "nullable": false },
+        { "name": "memory_type", "type": "varchar(60)", "nullable": false, "default": "'note'" },
+        { "name": "content", "type": "text", "nullable": false },
+        { "name": "metadata", "type": "jsonb", "nullable": true },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" }
+      ],
+      "indexes": [{ "columns": ["agent_id"] }],
+      "attach_points": [
+        { "name": "ai.semantic_search", "kind": "embedding_target" }
+      ],
+      "ai_capabilities": [
+        {
+          "key": "semantic_search",
+          "requires": ["ai.core.embedding"],
+          "embedding": { "text_fields": ["content"], "model_default": "text-embedding-3-large" }
+        }
+      ]
+    },
+    {
+      "name": "agent_task",
+      "table": "ai_agent_tasks",
+      "description": "Task queue. Tasks can be created by rules/workflows/events. Worker executes them via tools.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "organization_id", "type": "uuid", "nullable": false, "when": "config.multi_tenant == true" },
+        { "name": "agent_id", "type": "uuid", "nullable": false },
+        { "name": "entity_type", "type": "text", "nullable": true },
+        { "name": "entity_id", "type": "uuid", "nullable": true },
+        { "name": "task_type", "type": "varchar(120)", "nullable": false, "default": "'generic'" },
+        { "name": "input_json", "type": "jsonb", "nullable": false },
+        { "name": "status", "type": "varchar(30)", "nullable": false, "default": "'queued'" },
+        { "name": "attempts", "type": "int", "nullable": false, "default": "0" },
+        { "name": "max_attempts", "type": "int", "nullable": false, "default": "config.agent_task_max_attempts" },
+        { "name": "last_error", "type": "text", "nullable": true },
+        { "name": "created_at", "type": "timestamptz", "nullable": false, "default": "now()" },
+        { "name": "started_at", "type": "timestamptz", "nullable": true },
+        { "name": "finished_at", "type": "timestamptz", "nullable": true }
+      ],
+      "indexes": [
+        { "columns": ["status", "created_at"] },
+        { "columns": ["agent_id"] },
+        { "columns": ["entity_type", "entity_id"] }
+      ],
+      "events": [
+        { "name": "ai.agent_task.created", "emit_on": "insert" },
+        { "name": "ai.agent_task.completed", "emit_on": "update", "when": "NEW.status IN ('success','failed')" }
+      ]
+    },
+    {
+      "name": "agent_task_step",
+      "table": "ai_agent_task_steps",
+      "description": "Per-tool-call record for the task. Links to ai_runs for consistent observability.",
+      "fields": [
+        { "name": "id", "type": "uuid", "pk": true },
+        { "name": "task_id", "type": "uuid", "nullable": false },
+        { "name": "tool_id", "type": "uuid", "nullable": true },
+        { "name": "ai_run_id", "type": "uuid", "nullable": true },
+        { "name": "status", "type": "varchar(30)", "nullable": false, "default": "'queued'" },
+        { "name": "input_json", "type": "jsonb", "nullable": true },
+        { "name": "output_json", "type": "jsonb", "nullable": true },
+        { "name": "error", "type": "text", "nullable": true },
+        { "name": "started_at", "type": "timestamptz", "nullable": true },
+        { "name": "finished_at", "type": "timestamptz", "nullable": true }
+      ],
+      "indexes": [
+        { "columns": ["task_id"] },
+        { "columns": ["ai_run_id"] },
+        { "columns": ["status"] }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "name": "agent_tool.agent",
+      "from": { "entity": "agent_tool", "field": "agent_id" },
+      "to": { "module_key": "ai.agents", "entity": "agent", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    },
+    {
+      "name": "agent_tool.tool",
+      "from": { "entity": "agent_tool", "field": "tool_id" },
+      "to": { "module_key": "ai.agents", "entity": "tool", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    },
+    {
+      "name": "memory.agent",
+      "from": { "entity": "agent_memory_item", "field": "agent_id" },
+      "to": { "module_key": "ai.agents", "entity": "agent", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade",
+      "when": "config.memory_enabled == true"
+    },
+    {
+      "name": "task.agent",
+      "from": { "entity": "agent_task", "field": "agent_id" },
+      "to": { "module_key": "ai.agents", "entity": "agent", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    },
+    {
+      "name": "task_step.task",
+      "from": { "entity": "agent_task_step", "field": "task_id" },
+      "to": { "module_key": "ai.agents", "entity": "agent_task", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "cascade"
+    },
+    {
+      "name": "task_step.tool",
+      "from": { "entity": "agent_task_step", "field": "tool_id" },
+      "to": { "module_key": "ai.agents", "entity": "tool", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "set_null"
+    },
+    {
+      "name": "task_step.ai_run",
+      "from": { "entity": "agent_task_step", "field": "ai_run_id" },
+      "to": { "module_key": "ai.core", "entity": "ai_run", "field": "id" },
+      "cardinality": "many_to_one",
+      "on_delete": "set_null"
+    }
+  ],
+  "events": [
+    { "name": "ai.agent_task.created", "schema": { "task_id": "uuid", "agent_id": "uuid", "occurred_at": "timestamptz" } },
+    { "name": "ai.agent_task.completed", "schema": { "task_id": "uuid", "status": "text", "occurred_at": "timestamptz" } }
+  ]
+}
+
+MCP server generator pipeline design
+
+This is the end-to-end engine that takes a Pack and produces:
+	•	SQL schema/migrations
+	•	resolved manifest metadata (for your no-code backend)
+	•	runtime service wiring (rules/workflows/agents/tools)
+
+3A) Core pipeline stages
+
+Stage 0 — Inputs
+	•	pack_key
+	•	module list (module_key + version)
+	•	pack config (merged config)
+	•	target SQL dialect (Postgres recommended)
+
+Stage 1 — Load modules
+	•	Fetch blueprint JSON for each module/version.
+	•	Validate JSON schema for your blueprint format.
+
+Stage 2 — Resolve dependencies
+	•	Build dependency graph from dependencies[].
+	•	Ensure all required modules exist.
+	•	Select versions (pinned or resolved).
+	•	Produce ordered list (topological sort).
+
+Stage 3 — Resolve config + conditions
+	•	Create a single config object (pack-level).
+	•	For each module/entity/field/index/relationship with when, evaluate the expression.
+	•	Remove any disabled entities/fields/relationships/indexes.
+	•	Produce the Resolved Manifest:
+	•	entities[] (final)
+	•	relationships[] (final)
+	•	events_catalog[]
+	•	attach_points[]
+	•	ai_capabilities[]
+
+Stage 4 — Normalize & validate
+	•	Validate:
+	•	table name uniqueness
+	•	field name uniqueness per table
+	•	FK targets exist
+	•	PK exists
+	•	circular FK constraints manageable
+	•	Apply standard conventions:
+	•	created_at / updated_at triggers (optional)
+	•	default UUID generation (dialect-specific)
+	•	Optional: generate “soft delete” indexes if deleted_at exists.
+
+Stage 5 — SQL generation
+For each entity:
+	•	CREATE TABLE
+	•	constraints (PK/unique/check)
+	•	indexes
+For relationships:
+	•	ALTER TABLE ADD CONSTRAINT FK (or inline)
+For optional features (pgvector):
+	•	EXTENSION + vector type support
+
+Output:
+	•	schema.sql (full create)
+	•	or migration.sql (diff-based if you implement state)
+
+Stage 6 — Runtime wiring artifacts
+Generate a “runtime plan” for your services:
+	•	Subscriptions for automation.rules that listen to core.events
+	•	Workflow triggers from automation.workflow.workflow_triggers
+	•	Agent tool registry from ai.agents.ai_tools
+	•	Integration endpoints from automation.integrations.inbound_webhooks
+
+This stage produces:
+	•	runtime_manifest.json
+
+Stage 7 — Persist build
+Write to pack_builds:
+	•	resolved_manifest
+	•	sql_migration
+	•	(optionally) runtime_manifest
+
+3B) Minimal MCP server endpoints (what I’d implement)
+
+Blueprint / Packs
+	•	GET /modules
+	•	GET /modules/{module_key}/versions
+	•	POST /packs (create)
+	•	POST /packs/{pack_key}/build → returns {build_id, sql, resolved_manifest, runtime_manifest}
+
+Introspection for no-code UI
+	•	GET /packs/{pack_key}/manifest/latest
+	•	GET /packs/{pack_key}/schema/latest (SQL)
+	•	GET /packs/{pack_key}/catalog/entities
+	•	GET /packs/{pack_key}/catalog/events
+	•	GET /packs/{pack_key}/catalog/attach-points
+	•	GET /packs/{pack_key}/catalog/ai-capabilities
+
+Runtime hooks
+	•	POST /events (emit)
+	•	POST /webhooks/{path_key} (inbound webhook → event emit)
+	•	Worker endpoints (internal):
+	•	/workers/rules/run
+	•	/workers/scheduler/tick
+	•	/workers/agents/run
+
+3C) How the workers run (simple and robust)
+
+Rules worker loop
+	1.	Poll events for new entries OR event_deliveries pending.
+	2.	Find matching automation_rules by event_name + enabled + tenant.
+	3.	Create automation_rule_executions.
+	4.	Evaluate conditions.
+	5.	Execute actions in order:
+	•	webhook.call (use integration_http_action_templates)
+	•	ai.run (insert into ai_runs; optionally call model immediately)
+	•	event.emit (insert into events)
+	•	workflow.start (insert workflow_instance)
+	6.	Update status, dead-letter if needed.
+
+Scheduler worker loop
+	1.	Poll automation_schedules where next_run_at <= now() AND enabled.
+	2.	Create automation_schedule_runs.
+	3.	Emit events row (scheduler.tick or the schedule’s event_name).
+	4.	Compute next_run_at.
+
+Agents worker loop
+	1.	Poll ai_agent_tasks where status=queued.
+	2.	Create an ai_runs row for “agent reasoning” (optional).
+	3.	Execute tool calls → log to ai_agent_task_steps.
+	4.	Write outputs and mark success/failure.
+
+
+⸻
+
+— Meta blueprint authoring UI model (visual composition system)
+
+This is the data model for your visual “blueprint builder” UI (nodes, edges, palettes, validation, codegen previews). It should be stored in your Blueprint Registry DB (or a separate “ui” schema).
+
+4A) What the UI needs to represent
+	•	Modules as “components”
+	•	Entities as nodes
+	•	Fields as subcomponents
+	•	Relationships as edges
+	•	Events as emitted/consumed lines
+	•	Attach points as ports
+	•	AI capabilities as toggles per entity
+	•	Config options as knobs (global + module-level)
+	•	Dependencies as module graph edges
+
+4B) UI Storage Schema (relational)
+CREATE TABLE ui_projects (
+  id uuid PRIMARY KEY,
+  name text NOT NULL,
+  description text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE ui_canvases (
+  id uuid PRIMARY KEY,
+  project_id uuid NOT NULL REFERENCES ui_projects(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Each canvas references a pack (optional) and stores layout positions
+CREATE TABLE ui_canvas_nodes (
+  id uuid PRIMARY KEY,
+  canvas_id uuid NOT NULL REFERENCES ui_canvases(id) ON DELETE CASCADE,
+  node_type text NOT NULL,          -- "module" | "entity" | "event" | "ai_capability" | "attach_point"
+  ref_key text NOT NULL,            -- e.g. module_key or "module:entity" or event_name
+  x numeric(10,2) NOT NULL,
+  y numeric(10,2) NOT NULL,
+  width numeric(10,2),
+  height numeric(10,2),
+  ui_state jsonb
+);
+
+CREATE TABLE ui_canvas_edges (
+  id uuid PRIMARY KEY,
+  canvas_id uuid NOT NULL REFERENCES ui_canvases(id) ON DELETE CASCADE,
+  edge_type text NOT NULL,          -- "dependency" | "relationship" | "emits" | "consumes" | "attaches"
+  from_ref text NOT NULL,
+  to_ref text NOT NULL,
+  ui_state jsonb
+);
+
+-- A draft blueprint document being edited (before publishing a version)
+CREATE TABLE ui_blueprint_drafts (
+  id uuid PRIMARY KEY,
+  module_key text NOT NULL,
+  base_version text,
+  draft_json jsonb NOT NULL,
+  status text NOT NULL DEFAULT 'draft',  -- draft|validated|published
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- Validation results for the UI to show warnings/errors
+CREATE TABLE ui_validation_results (
+  id uuid PRIMARY KEY,
+  draft_id uuid NOT NULL REFERENCES ui_blueprint_drafts(id) ON DELETE CASCADE,
+  severity text NOT NULL,           -- info|warning|error
+  code text NOT NULL,               -- e.g. "FK_TARGET_MISSING"
+  message text NOT NULL,
+  pointer text,                     -- json pointer like "/entities/2/fields/4"
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+4C) UI operations (how the visual composer works)
+
+Palette
+	•	Core modules palette (identity, events, ai, rules, workflow, attachments, etc.)
+	•	Domain modules palette (crm, ticketing, marketplace…)
+	•	Pattern palette (soft delete, audit, tags, custom fields)
+
+Canvas actions
+	•	Drag in a module → adds dependency edges automatically
+	•	Click “Add entity” inside module → creates entity node, opens field editor
+	•	Add relationship by drawing line entity→entity
+	•	Add event emissions (entity emits event)
+	•	Add rule triggers (rule consumes event)
+	•	Add AI capability toggles on entity (semantic search, scoring, summarization)
+	•	Add attach points (files/comments/status/custom fields)
+
+Validation panel
+	•	missing FK targets
+	•	conflicting table names
+	•	incompatible config
+	•	missing dependencies
+	•	unsafe action types (if you enforce safety policy)
+
+Preview panel
+	•	resolved manifest preview
+	•	generated SQL preview (read-only)
+	•	“diff” preview vs last build (optional)
+
+Publish flow
+	•	Validate draft → if OK → publish → create blueprint_versions record, mark checksum.
+
+
+⸻
+
+What I will have now have (end-to-end)
+	•	Automation rules + scheduling + integrations (Phase 1)
+	•	AI agent workers + tools + memory + task queue (Phase 2)
+	•	MCP build/generate pipeline design (Phase 3)
+	•	Visual authoring UI data model (Phase 4)
+
+Generate packs for:
+	•	crm.ai_first.v1
+	•	ticketing.ai_first.v1
+	•	internal_automation.intelligent.v1
+	•	saas.ai_augmented.v1
+
+Below are fully composed production-ready packs using:
+	•	Core modules
+	•	AI core
+	•	AI agents
+	•	Workflow
+	•	Rules
+	•	Scheduler
+	•	Integrations
+	•	Attachments / Comments / Audit / Tags / Custom Fields
+	•	Domain modules
+
+Each pack includes:
+	1.	Pack metadata
+	2.	Ordered modules (dependency-safe)
+	3.	Final resolved config
+	4.	What this pack enables architecturally
+
+These are ready to insert into blueprint_packs, pack_modules, and pack_config.
+
+⸻
+
+1 PACK: crm.ai_first.v1
+
+Metadata
+{
+  "pack_key": "crm.ai_first.v1",
+  "name": "AI-First CRM",
+  "description": "Multi-tenant AI-native CRM with workflow automation, intelligent agents, and event-driven rules.",
+  "build_number": 1
+}
+Modules (dependency ordered)
+{
+  "modules": [
+    { "module_key": "core.identity", "version": "1.0.0", "sort_order": 1 },
+    { "module_key": "core.events", "version": "1.0.0", "sort_order": 2 },
+
+    { "module_key": "core.audit", "version": "1.0.0", "sort_order": 3 },
+    { "module_key": "core.tags", "version": "1.0.0", "sort_order": 4 },
+    { "module_key": "core.custom_fields", "version": "1.0.0", "sort_order": 5 },
+    { "module_key": "core.attachments", "version": "1.0.0", "sort_order": 6 },
+    { "module_key": "core.comments", "version": "1.0.0", "sort_order": 7 },
+    { "module_key": "core.statuses", "version": "1.0.0", "sort_order": 8 },
+
+    { "module_key": "ai.core", "version": "1.0.0", "sort_order": 9 },
+    { "module_key": "ai.agents", "version": "1.0.0", "sort_order": 10 },
+
+    { "module_key": "automation.workflow", "version": "1.0.0", "sort_order": 11 },
+    { "module_key": "automation.rules", "version": "1.0.0", "sort_order": 12 },
+    { "module_key": "automation.scheduler", "version": "1.0.0", "sort_order": 13 },
+    { "module_key": "automation.integrations", "version": "1.0.0", "sort_order": 14 },
+
+    { "module_key": "crm.core", "version": "1.0.0", "sort_order": 15 }
+  ]
+}
+
+Config
+{
+  "config": {
+    "multi_tenant": true,
+    "soft_delete": true,
+    "rbac_enabled": true,
+
+    "store_event_entity_refs": true,
+
+    "embeddings_enabled": true,
+    "suggestions_enabled": true,
+    "default_embedding_model": "text-embedding-3-large",
+
+    "lead_scoring_enabled": true,
+    "ai_next_best_action_enabled": true,
+
+    "ai_routing_enabled": true,
+
+    "rules_enabled": true,
+    "scheduler_enabled": true,
+    "integrations_enabled": true
+  }
+}
+
+This CRM Pack Enables
+	•	AI lead scoring (automatic)
+	•	AI next-best-action suggestions
+	•	Agent-based email drafting
+	•	Event-driven deal automation
+	•	Scheduled pipeline reminders
+	•	Webhook-based enrichment
+	•	Fully extensible custom CRM fields
+	•	AI semantic search across accounts, notes, emails
+
+⸻
+
+2 PACK: ticketing.ai_first.v1
+
+Metadata
+{
+  "pack_key": "ticketing.ai_first.v1",
+  "name": "AI-First Ticketing System",
+  "description": "AI-augmented support system with intelligent triage, routing, SLA automation, and agent assistance.",
+  "build_number": 1
+}
+
+Modules
+{
+  "modules": [
+    { "module_key": "core.identity", "version": "1.0.0", "sort_order": 1 },
+    { "module_key": "core.events", "version": "1.0.0", "sort_order": 2 },
+
+    { "module_key": "core.audit", "version": "1.0.0", "sort_order": 3 },
+    { "module_key": "core.tags", "version": "1.0.0", "sort_order": 4 },
+    { "module_key": "core.custom_fields", "version": "1.0.0", "sort_order": 5 },
+    { "module_key": "core.attachments", "version": "1.0.0", "sort_order": 6 },
+    { "module_key": "core.comments", "version": "1.0.0", "sort_order": 7 },
+
+    { "module_key": "ai.core", "version": "1.0.0", "sort_order": 8 },
+    { "module_key": "ai.agents", "version": "1.0.0", "sort_order": 9 },
+
+    { "module_key": "automation.workflow", "version": "1.0.0", "sort_order": 10 },
+    { "module_key": "automation.rules", "version": "1.0.0", "sort_order": 11 },
+    { "module_key": "automation.scheduler", "version": "1.0.0", "sort_order": 12 },
+    { "module_key": "automation.integrations", "version": "1.0.0", "sort_order": 13 },
+
+    { "module_key": "ticketing.core", "version": "1.0.0", "sort_order": 14 }
+  ]
+}
+
+Config
+{
+  "config": {
+    "multi_tenant": true,
+    "rbac_enabled": true,
+
+    "embeddings_enabled": true,
+    "suggestions_enabled": true,
+
+    "ai_auto_triage_enabled": true,
+    "ai_priority_prediction_enabled": true,
+    "ai_agent_assist_enabled": true,
+
+    "ai_routing_enabled": true
+  }
+}
+
+This Ticketing Pack Enables
+	•	AI intent classification
+	•	AI priority scoring
+	•	Automatic SLA breach prediction
+	•	AI-assisted response drafting
+	•	Smart assignment routing
+	•	Event-driven escalation rules
+	•	Scheduled SLA checks
+	•	Full observability of AI decisions
+
+⸻
+
+3 PACK: internal_automation.intelligent.v1
+
+Metadata
+{
+  "pack_key": "internal_automation.intelligent.v1",
+  "name": "Intelligent Internal Automation",
+  "description": "Event-driven automation platform with rules engine, scheduler, integrations, and AI routing.",
+  "build_number": 1
+}
+
+Modules
+{
+  "modules": [
+    { "module_key": "core.identity", "version": "1.0.0", "sort_order": 1 },
+    { "module_key": "core.events", "version": "1.0.0", "sort_order": 2 },
+
+    { "module_key": "core.audit", "version": "1.0.0", "sort_order": 3 },
+    { "module_key": "core.custom_fields", "version": "1.0.0", "sort_order": 4 },
+    { "module_key": "core.tags", "version": "1.0.0", "sort_order": 5 },
+
+    { "module_key": "ai.core", "version": "1.0.0", "sort_order": 6 },
+    { "module_key": "ai.agents", "version": "1.0.0", "sort_order": 7 },
+
+    { "module_key": "automation.workflow", "version": "1.0.0", "sort_order": 8 },
+    { "module_key": "automation.rules", "version": "1.0.0", "sort_order": 9 },
+    { "module_key": "automation.scheduler", "version": "1.0.0", "sort_order": 10 },
+    { "module_key": "automation.integrations", "version": "1.0.0", "sort_order": 11 },
+
+    { "module_key": "internal.ops", "version": "1.0.0", "sort_order": 12 }
+  ]
+}
+
+Config
+{
+  "config": {
+    "multi_tenant": true,
+    "rbac_enabled": true,
+
+    "rules_enabled": true,
+    "scheduler_enabled": true,
+    "integrations_enabled": true,
+
+    "ai_routing_enabled": true,
+    "ai_anomaly_detection_enabled": true,
+    "ai_document_summarization_enabled": true
+  }
+}
+
+This Enables
+	•	Automated approval flows
+	•	Event-driven operations
+	•	Scheduled audits
+	•	Webhook ingestion
+	•	AI anomaly detection
+	•	AI summarization of operational logs
+	•	AI agents performing internal tasks
+	•	Fully extensible internal systems
+
+⸻
+
+4 PACK: saas.ai_augmented.v1
+
+Metadata
+{
+  "pack_key": "saas.ai_augmented.v1",
+  "name": "AI-Augmented SaaS Platform",
+  "description": "Generic multi-tenant SaaS base with AI capabilities, workflow automation, and extensibility.",
+  "build_number": 1
+}
+
+Modules
+{
+  "modules": [
+    { "module_key": "core.identity", "version": "1.0.0", "sort_order": 1 },
+    { "module_key": "core.events", "version": "1.0.0", "sort_order": 2 },
+
+    { "module_key": "core.audit", "version": "1.0.0", "sort_order": 3 },
+    { "module_key": "core.tags", "version": "1.0.0", "sort_order": 4 },
+    { "module_key": "core.custom_fields", "version": "1.0.0", "sort_order": 5 },
+    { "module_key": "core.attachments", "version": "1.0.0", "sort_order": 6 },
+    { "module_key": "core.comments", "version": "1.0.0", "sort_order": 7 },
+
+    { "module_key": "ai.core", "version": "1.0.0", "sort_order": 8 },
+    { "module_key": "ai.agents", "version": "1.0.0", "sort_order": 9 },
+
+    { "module_key": "automation.workflow", "version": "1.0.0", "sort_order": 10 },
+    { "module_key": "automation.rules", "version": "1.0.0", "sort_order": 11 },
+    { "module_key": "automation.scheduler", "version": "1.0.0", "sort_order": 12 },
+    { "module_key": "automation.integrations", "version": "1.0.0", "sort_order": 13 },
+
+    { "module_key": "saas.core", "version": "1.0.0", "sort_order": 14 }
+  ]
+}
+
+Config
+{
+  "config": {
+    "multi_tenant": true,
+    "soft_delete": true,
+    "rbac_enabled": true,
+
+    "embeddings_enabled": true,
+    "suggestions_enabled": true,
+    "ai_assistant_enabled": true,
+
+    "rules_enabled": true,
+    "scheduler_enabled": true,
+    "integrations_enabled": true
+  }
+}
+
+This SaaS Pack Enables
+	•	AI assistant across any SaaS resource
+	•	AI semantic search across user-generated content
+	•	Event-driven product automation
+	•	Scheduled maintenance tasks
+	•	Integration-ready SaaS platform
+	•	Custom fields for rapid product iteration
+	•	Agent-based background AI workers
+
+⸻
+
+🧠 Final Architectural Result
+
+With these four packs:
+
+Your core system can generate:
+	•	AI-native CRM
+	•	AI-native Ticketing
+	•	AI-native SaaS platforms
+	•	AI-native automation systems
+	•	And any hybrid between them
+
+Because:
+
+Everything is:
+	•	Event-driven
+	•	Workflow-aware
+	•	AI-attachable
+	•	Extensible
+	•	Multi-tenant
+	•	No-code configurable
+
