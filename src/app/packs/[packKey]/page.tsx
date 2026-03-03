@@ -42,6 +42,12 @@ interface AvailableModule {
   layer: string;
 }
 
+interface ExecResult {
+  success: boolean;
+  tables_created?: string[];
+  error?: string;
+}
+
 const LAYER_COLORS: Record<string, string> = {
   core: "bg-blue-500/10 text-blue-400 border-blue-500/20",
   ai: "bg-purple-500/10 text-purple-400 border-purple-500/20",
@@ -59,6 +65,7 @@ export default function PackDetail() {
   const [builds, setBuilds] = useState<BuildSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [building, setBuilding] = useState(false);
+  const [buildPhase, setBuildPhase] = useState<string | null>(null);
   const [buildResult, setBuildResult] = useState<BuildResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [availableModules, setAvailableModules] = useState<AvailableModule[]>([]);
@@ -66,6 +73,9 @@ export default function PackDetail() {
   const [configEditing, setConfigEditing] = useState(false);
   const [configDraft, setConfigDraft] = useState<Record<string, boolean | string | number>>({});
   const [savingConfig, setSavingConfig] = useState(false);
+  const [activeTab, setActiveTab] = useState<"sql" | "tables">("sql");
+  const [executing, setExecuting] = useState(false);
+  const [execResult, setExecResult] = useState<ExecResult | null>(null);
 
   const loadPack = useCallback(() => {
     Promise.all([
@@ -90,9 +100,12 @@ export default function PackDetail() {
 
   async function runBuild() {
     setBuilding(true);
+    setBuildPhase("Resolving modules...");
     setBuildResult(null);
+    setExecResult(null);
     setError(null);
     try {
+      setBuildPhase("Generating SQL...");
       const res = await fetch(`/api/generator/packs/${packKey}/build`, {
         method: "POST",
         credentials: "include",
@@ -103,6 +116,7 @@ export default function PackDetail() {
         if (data.errors) setError(data.errors.join("; "));
       } else {
         setBuildResult(data);
+        setActiveTab("sql");
         const buildsRes = await fetch(`/api/generator/packs/${packKey}/builds`, { credentials: "include" });
         if (buildsRes.ok) setBuilds(await buildsRes.json());
       }
@@ -110,6 +124,27 @@ export default function PackDetail() {
       setError(e instanceof Error ? e.message : "Build failed");
     } finally {
       setBuilding(false);
+      setBuildPhase(null);
+    }
+  }
+
+  async function executeSql() {
+    if (!buildResult) return;
+    setExecuting(true);
+    setExecResult(null);
+    try {
+      const res = await fetch(`/api/generator/packs/${packKey}/execute/sql`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirm: true, build_number: buildResult.build_number }),
+      });
+      const data = await res.json();
+      setExecResult(data);
+    } catch (e) {
+      setExecResult({ success: false, error: e instanceof Error ? e.message : "Failed" });
+    } finally {
+      setExecuting(false);
     }
   }
 
@@ -256,6 +291,13 @@ export default function PackDetail() {
   const includedKeys = new Set(pack.modules.map((m) => m.module_key));
   const filteredAvailable = availableModules.filter((m) => !includedKeys.has(m.module_key));
 
+  const hasPriorBuilds = builds.length > 0;
+  const buildButtonLabel = building
+    ? (buildPhase || "Building...")
+    : hasPriorBuilds && !buildResult
+      ? "Rebuild"
+      : "Build";
+
   return (
     <div>
       {/* Header */}
@@ -286,7 +328,7 @@ export default function PackDetail() {
             disabled={building}
             className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
           >
-            {building ? "Building..." : "Build"}
+            {buildButtonLabel}
           </button>
           <button
             onClick={handleDeletePack}
@@ -326,7 +368,7 @@ export default function PackDetail() {
         </div>
       )}
 
-      {/* Build Result */}
+      {/* Inline Build Output */}
       {buildResult && (
         <div className="mb-8 rounded-lg border border-success/30 bg-success/10 p-5">
           <div className="flex items-center justify-between">
@@ -336,13 +378,33 @@ export default function PackDetail() {
                 {buildResult.resolved_manifest.entities.length} tables generated
               </p>
             </div>
-            <a
-              href={`/packs/${packKey}/builds/${buildResult.build_number}`}
-              className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white"
-            >
-              View Output
-            </a>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={executeSql}
+                disabled={executing || execResult?.success === true}
+                className="rounded-md bg-accent px-4 py-2 text-xs font-medium text-white transition-colors hover:bg-accent-hover disabled:opacity-50"
+              >
+                {executing ? "Executing..." : execResult?.success ? "SQL Executed" : "Execute SQL"}
+              </button>
+              <a
+                href={`/packs/${packKey}/builds/${buildResult.build_number}`}
+                className="rounded-md border border-card-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-card"
+              >
+                Full Output
+              </a>
+            </div>
           </div>
+
+          {/* Exec result */}
+          {execResult && (
+            <div className={`mt-3 rounded-md border p-3 text-xs ${execResult.success ? "border-success/30 bg-success/5 text-success" : "border-danger/30 bg-danger/5 text-danger"}`}>
+              {execResult.success
+                ? `SQL executed successfully. ${execResult.tables_created?.length || 0} tables created.`
+                : `Error: ${execResult.error}`}
+            </div>
+          )}
+
+          {/* Validation warnings */}
           {buildResult.validation.warnings.length > 0 && (
             <div className="mt-3 text-xs text-warning">
               {buildResult.validation.warnings.map((w, i) => (
@@ -350,6 +412,39 @@ export default function PackDetail() {
               ))}
             </div>
           )}
+
+          {/* Mini tabs: SQL Preview / Tables */}
+          <div className="mt-4">
+            <div className="flex gap-4 border-b border-card-border">
+              <button
+                onClick={() => setActiveTab("sql")}
+                className={`pb-2 text-xs font-medium transition-colors ${activeTab === "sql" ? "border-b-2 border-accent text-accent" : "text-muted hover:text-foreground"}`}
+              >
+                SQL Preview
+              </button>
+              <button
+                onClick={() => setActiveTab("tables")}
+                className={`pb-2 text-xs font-medium transition-colors ${activeTab === "tables" ? "border-b-2 border-accent text-accent" : "text-muted hover:text-foreground"}`}
+              >
+                Tables ({buildResult.resolved_manifest.entities.length})
+              </button>
+            </div>
+            <div className="mt-3">
+              {activeTab === "sql" ? (
+                <pre className="max-h-64 overflow-auto rounded-md border border-card-border bg-background p-3 text-xs font-mono text-muted">
+                  {buildResult.sql_migration}
+                </pre>
+              ) : (
+                <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-4">
+                  {buildResult.resolved_manifest.entities.map((e) => (
+                    <div key={e.table} className="rounded-md border border-card-border bg-background px-3 py-2 text-xs font-mono text-muted">
+                      {e.table}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

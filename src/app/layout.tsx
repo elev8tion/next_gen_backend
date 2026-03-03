@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NavUser } from "./nav-user";
+import { NavLinks } from "./nav-links";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,21 +35,7 @@ export default function RootLayout({
               Next Gen Backend
             </a>
             <div className="flex items-center gap-6 text-sm">
-              <a href="/" className="text-muted hover:text-foreground transition-colors">
-                Dashboard
-              </a>
-              <a href="/modules" className="text-muted hover:text-foreground transition-colors">
-                Modules
-              </a>
-              <a href="/composer" className="text-muted hover:text-foreground transition-colors">
-                Composer
-              </a>
-              <a href="/workers" className="text-muted hover:text-foreground transition-colors">
-                Workers
-              </a>
-              <a href="/setup" className="text-muted hover:text-foreground transition-colors">
-                Setup
-              </a>
+              <NavLinks />
               <NavUser />
             </div>
           </div>

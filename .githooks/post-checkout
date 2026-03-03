@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Auto-switch .env.local based on the current branch name.
+# $3 = 1 means this is a branch checkout (not a file checkout).
+if [ "$3" != "1" ]; then exit 0; fi
+BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null)
+ENV_FILE="env/${BRANCH}.env"
+if [ -f "$ENV_FILE" ]; then
+  cp "$ENV_FILE" .env.local
+  echo "[env-switch] Activated ${BRANCH} -> .env.local"
+  echo "[env-switch] Restart 'npm run dev' for changes to take effect."
+else
+  echo "[env-switch] WARNING: No env template at $ENV_FILE"
+fi
