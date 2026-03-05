@@ -10,6 +10,7 @@
     "src/lib/generator/pipeline.ts"
   ],
   "blueprint_dirs": [
+    "src/lib/generator",
     "src/lib/blueprints",
     "blueprints",
     "modules"

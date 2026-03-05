@@ -88,7 +88,7 @@ export function chunkText(
 }
 
 // ---------------------------------------------------------------------------
-// Placeholder embedding helpers
+// Embedding helpers
 // ---------------------------------------------------------------------------
 
 /**
@@ -107,6 +107,68 @@ export function generatePlaceholderEmbedding(dimensions = 1536): {
     base64: buffer.toString("base64"),
     vector: Array.from(arr),
     metadata: { placeholder: true },
+  };
+}
+
+function fnv1a32(input: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+function normalizeVector(vec: Float32Array): void {
+  let sumSquares = 0;
+  for (let i = 0; i < vec.length; i++) {
+    sumSquares += vec[i] * vec[i];
+  }
+  const norm = Math.sqrt(sumSquares);
+  if (norm === 0) return;
+  for (let i = 0; i < vec.length; i++) {
+    vec[i] /= norm;
+  }
+}
+
+/**
+ * Deterministic local embedding generator.
+ * Uses hashed token features so query/index vectors share lexical semantics
+ * without external API dependencies.
+ */
+export function generateLocalEmbedding(text: string, dimensions = 1536): {
+  base64: string;
+  vector: number[];
+  metadata: { provider: "local-hash"; version: "v1"; empty?: true };
+} {
+  const vec = new Float32Array(dimensions);
+  const tokens = (text || "")
+    .toLowerCase()
+    .match(/[a-z0-9_]+/g) || [];
+
+  if (tokens.length === 0) {
+    const buffer = Buffer.from(vec.buffer);
+    return {
+      base64: buffer.toString("base64"),
+      vector: Array.from(vec),
+      metadata: { provider: "local-hash", version: "v1", empty: true },
+    };
+  }
+
+  for (const token of tokens) {
+    const h1 = fnv1a32(token) % dimensions;
+    const h2 = fnv1a32(`${token}:2`) % dimensions;
+    const w = Math.min(3, Math.max(1, token.length / 4));
+    vec[h1] += w;
+    vec[h2] -= w * 0.35;
+  }
+
+  normalizeVector(vec);
+  const buffer = Buffer.from(vec.buffer);
+  return {
+    base64: buffer.toString("base64"),
+    vector: Array.from(vec),
+    metadata: { provider: "local-hash", version: "v1" },
   };
 }
 
@@ -178,7 +240,7 @@ export interface IndexDocumentResult {
  * 1. Create knowledge_documents record (status: "processing")
  * 2. Split content into chunks
  * 3. Create knowledge_chunks records
- * 4. Create knowledge_embeddings records (placeholder vectors)
+ * 4. Create knowledge_embeddings records
  * 5. Update document status to "indexed" with chunk_count
  * 6. Create knowledge_links record if entity_ref provided
  */
@@ -235,8 +297,8 @@ export async function indexDocument(
       }
     );
 
-    // Create placeholder embedding
-    const placeholder = generatePlaceholderEmbedding(embeddingDimensions);
+    // Create deterministic local embedding
+    const embedding = generateLocalEmbedding(chunkContent, embeddingDimensions);
     await ncbFetch(
       "create/knowledge_embeddings",
       authCookies,
@@ -244,9 +306,9 @@ export async function indexDocument(
       "POST",
       {
         chunk_id: chunkRecord.id,
-        model: "text-embedding-3-large",
-        vector: placeholder.base64,
-        metadata: placeholder.metadata,
+        model: "local-hash-embedding-v1",
+        vector: embedding.base64,
+        metadata: embedding.metadata,
       }
     );
   }

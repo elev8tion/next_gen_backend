@@ -17,6 +17,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as crypto from "crypto";
+import { execSync } from "child_process";
 
 type Severity = "error" | "warning";
 
@@ -121,15 +122,55 @@ type BlueprintSummary = {
   dependencies: string[];
 };
 
-function tryParseBlueprint(filePath: string): BlueprintSummary | null {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function extractDependencyKeys(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  const deps: string[] = [];
+  for (const dep of value) {
+    if (isRecord(dep) && typeof dep.module_key === "string") {
+      deps.push(dep.module_key);
+    }
+  }
+  return deps;
+}
+
+function tryParseBlueprints(filePath: string): BlueprintSummary[] {
   const raw = fs.readFileSync(filePath, "utf8");
   // Quick reject for large non-JSON files
-  if (!raw.includes('"module"') || !raw.includes('"key"')) return null;
-  let obj: any;
-  try { obj = JSON.parse(raw); } catch { return null; }
-  if (!obj?.module?.key || typeof obj.module.key !== "string") return null;
-  const deps = Array.isArray(obj.dependencies) ? obj.dependencies.map((d: any) => d?.module_key).filter(Boolean) : [];
-  return { file: filePath, module_key: obj.module.key, dependencies: deps };
+  if (!raw.includes('"module"') && !raw.includes('"module_key"')) return [];
+  let obj: unknown;
+  try { obj = JSON.parse(raw); } catch { return []; }
+  if (!isRecord(obj)) return [];
+
+  const results: BlueprintSummary[] = [];
+
+  // Format A: standalone blueprint module JSON
+  if (isRecord(obj.module) && typeof obj.module.key === "string") {
+    results.push({
+      file: filePath,
+      module_key: obj.module.key,
+      dependencies: extractDependencyKeys(obj.dependencies),
+    });
+  }
+
+  // Format B: seed-data.json with modules[]
+  if (Array.isArray(obj.modules)) {
+    for (const entry of obj.modules) {
+      if (!isRecord(entry) || typeof entry.module_key !== "string") continue;
+      const blueprintJson = isRecord(entry.blueprint_json) ? entry.blueprint_json : null;
+      const deps = blueprintJson ? extractDependencyKeys(blueprintJson.dependencies) : [];
+      results.push({
+        file: filePath,
+        module_key: entry.module_key,
+        dependencies: deps,
+      });
+    }
+  }
+
+  return results;
 }
 
 function discoverBlueprints(root: string, cfg: Config): BlueprintSummary[] {
@@ -158,10 +199,14 @@ function discoverBlueprints(root: string, cfg: Config): BlueprintSummary[] {
 
   const out: BlueprintSummary[] = [];
   for (const f of candidates) {
-    const s = tryParseBlueprint(f);
-    if (s) out.push(s);
+    const summaries = tryParseBlueprints(f);
+    if (summaries.length) out.push(...summaries);
   }
-  return out;
+  const deduped = new Map<string, BlueprintSummary>();
+  for (const bp of out) {
+    deduped.set(`${bp.file}:${bp.module_key}`, bp);
+  }
+  return Array.from(deduped.values());
 }
 
 function classifyLayer(cfg: Config, moduleKey: string): string | null {
@@ -278,8 +323,7 @@ function runDeterminismTest(root: string, cfg: Config, findings: Finding[]) {
 
   // Run command twice and hash outputs
   const runOnce = (label: string): Record<string, string> => {
-    const res = require("child_process").execSync(cmd, { cwd: root, stdio: "inherit", shell: true });
-    void res;
+    execSync(cmd, { cwd: root, stdio: "inherit", shell: "/bin/sh" });
     const hashes: Record<string, string> = {};
     for (const rel of outputs) {
       const abs = path.join(root, rel);
@@ -297,8 +341,9 @@ function runDeterminismTest(root: string, cfg: Config, findings: Finding[]) {
   try {
     h1 = runOnce("run1");
     h2 = runOnce("run2");
-  } catch (e: any) {
-    addFinding(findings, "error", "DETERMINISM_CMD_FAILED", "Determinism command failed to run.", { error: String(e?.message || e) });
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    addFinding(findings, "error", "DETERMINISM_CMD_FAILED", "Determinism command failed to run.", { error: message });
     return;
   }
 
@@ -345,8 +390,9 @@ async function main() {
   let cfg: Config;
   try {
     cfg = loadConfig(root, configPath);
-  } catch (e: any) {
-    console.error(String(e?.message || e));
+  } catch (e: unknown) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(message);
     process.exit(2);
     return;
   }
