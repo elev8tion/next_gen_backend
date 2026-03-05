@@ -1,0 +1,241 @@
+Now that runtime execution is complete, the next highest-leverage move is:
+
+🔥 Implement ai.retrieval Properly and Completely
+
+Not experimental.
+Not vague.
+Not partial.
+
+Fully specified.
+Fully blueprint-defined.
+Fully integrated.
+
+⸻
+
+Why This Is Now The Logical Next Step
+
+From your own status file  ￼:
+
+ai.retrieval module — mentioned but never fully defined in instructions. Not in seed data.
+
+Everything else is built.
+
+Everything else is coherent.
+
+This is the only real architectural gap remaining in Option A.
+
+And it’s a major one.
+
+⸻
+
+🧠 Why Retrieval Comes Before Anything Else
+
+Now that:
+	•	Automation is complete
+	•	AI runs can be triggered
+	•	Agents exist
+	•	Embeddings exist
+	•	SQL generator supports vector
+
+The missing piece is:
+
+Persistent, queryable semantic memory.
+
+Without retrieval:
+	•	Embeddings are decorative.
+	•	AI suggestions are transient.
+	•	Agents have no long-term system knowledge.
+	•	Packs cannot support semantic search properly.
+	•	AI-first CRM and Ticketing are incomplete in practice.
+
+Retrieval is the bridge between:
+
+Layer 4 (AI Intelligence)
+and
+Layer 3 (Automation Engine)
+
+⸻
+
+🎯 The Next Whole and Complete Objective
+
+Implement:
+
+ai.retrieval Module — Production Grade
+
+This must include:
+
+1️⃣ Collections
+
+Logical grouping of knowledge.
+
+2️⃣ Documents
+
+Top-level knowledge units.
+
+3️⃣ Chunks
+
+Text segments (for embedding).
+
+4️⃣ Embeddings
+
+Vector storage.
+
+5️⃣ Links
+
+Polymorphic link to system entities.
+
+⸻
+
+📦 What “Complete” Means
+
+This is not just a schema.
+
+You must deliver:
+	•	Blueprint definition
+	•	SQL generation compatibility
+	•	pgvector DDL correctness
+	•	Insert + embed pipeline
+	•	Query by semantic similarity
+	•	Runtime manifest registration
+	•	Worker support (if needed)
+	•	Seed data updates
+	•	Pack integration
+
+Until all of those are done, it is not complete.
+
+⸻
+
+📌 Exact Implementation Scope
+
+Part 1 — Blueprint Definition
+
+New module: ai.retrieval
+
+Entities:
+knowledge_collections
+knowledge_documents
+knowledge_chunks
+knowledge_embeddings
+knowledge_links
+
+Relationships:
+	•	document → collection
+	•	chunk → document
+	•	embedding → chunk
+	•	link → (entity_type, entity_id)
+
+⸻
+
+Part 2 — SQL Generator Upgrade
+
+You already support vector type.
+
+Now ensure:
+	•	CREATE EXTENSION IF NOT EXISTS vector;
+	•	Proper vector column syntax
+	•	Optional dimension config (e.g., 1536 default)
+
+⸻
+
+Part 3 — Retrieval Query API
+
+Add endpoint:
+/api/ai/retrieve
+
+Input:
+	•	collection_id
+	•	query_text
+	•	top_k
+
+Flow:
+	1.	Generate embedding for query
+	2.	Perform vector similarity search
+	3.	Join back to chunks + documents
+	4.	Return structured results
+
+⸻
+
+Part 4 — Insert + Chunking Pipeline
+
+Add utility:
+
+indexDocument({
+  collection_id,
+  content,
+  entity_ref?
+})
+
+Flow:
+	•	Split into chunks
+	•	Insert chunks
+	•	Generate embeddings
+	•	Store vectors
+	•	Link to entity if provided
+
+⸻
+
+Part 5 — Pack Integration
+
+Update:
+	•	AI-First CRM
+	•	AI-First Ticketing
+	•	SaaS pack
+
+Add optional config:
+
+semantic_search_enabled: boolean
+
+If true:
+	•	Add ai.retrieval module
+	•	Enable embedding targets
+	•	Register semantic search capability
+
+⸻
+
+🚫 What You Should NOT Do Next
+
+Do NOT:
+	•	Expand Composer UI yet
+	•	Add background worker daemon
+	•	Add more packs
+	•	Add Option B introspection layer
+	•	Refactor generator
+	•	Add simulation engine
+
+You finish retrieval first.
+
+⸻
+
+🧭 After Retrieval Is Complete
+
+Then the correct next move would be:
+
+Improve Composer Draft → Publish Flow
+
+Because then your system is:
+	•	Architecturally complete
+	•	Behaviorally complete
+	•	AI-memory complete
+	•	Composable
+	•	Publishable
+
+⸻
+
+🏗️ So The Order Now Is:
+
+1️⃣ Implement ai.retrieval module (fully)
+2️⃣ Add semantic retrieval API
+3️⃣ Integrate retrieval into AI packs
+4️⃣ Test full semantic search loop
+5️⃣ Then improve Composer publish UX
+
+⸻
+
+🧠 Why This Order Is Correct
+
+Because now:
+	•	Your runtime is complete.
+	•	Your AI layer is execution-capable.
+	•	Retrieval is the last foundational primitive.
+
+Everything after that is refinement.

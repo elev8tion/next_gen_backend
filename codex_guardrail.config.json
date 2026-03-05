@@ -1,0 +1,73 @@
+{
+  "required_files": [
+    "src/lib/generator/loader.ts",
+    "src/lib/generator/resolver.ts",
+    "src/lib/generator/config-evaluator.ts",
+    "src/lib/generator/validator.ts",
+    "src/lib/generator/sql-generator.ts",
+    "src/lib/generator/runtime-manifest.ts",
+    "src/lib/generator/blueprint-validator.ts",
+    "src/lib/generator/pipeline.ts"
+  ],
+  "blueprint_dirs": [
+    "src/lib/blueprints",
+    "blueprints",
+    "modules"
+  ],
+  "layers": {
+    "core": [
+      "core.identity",
+      "core.events",
+      "core.audit",
+      "core.attachments",
+      "core.comments",
+      "core.tags",
+      "core.custom_fields",
+      "core.statuses"
+    ],
+    "domain": [
+      "crm.core",
+      "ticketing.core",
+      "marketplace.core",
+      "saas.core",
+      "internal.ops"
+    ],
+    "automation": [
+      "automation.workflow",
+      "automation.rules",
+      "automation.scheduler",
+      "automation.integrations"
+    ],
+    "ai": [
+      "ai.core",
+      "ai.agents",
+      "ai.retrieval"
+    ],
+    "system": [
+      "system.intelligence"
+    ]
+  },
+  "forbidden_import_substrings": [
+    "prisma",
+    "typeorm",
+    "sequelize",
+    "mongoose",
+    "knex",
+    "better-sqlite3",
+    "sqlite3",
+    "leveldb",
+    "lowdb",
+    "nedb",
+    "waterline"
+  ],
+  "code_dirs": [
+    "src"
+  ],
+  "determinism_test": {
+    "enabled": false,
+    "command": "npm run build:manifest -- --pack crm.ai_first.v1",
+    "output_paths": [
+      "artifacts/runtime-manifest.json"
+    ]
+  }
+}

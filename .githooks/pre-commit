@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Running Codex Guardrail checks..."
+
+# Prefer tsx. If unavailable, fallback to ts-node. If both unavailable,
+# transpile once with local TypeScript and run with node (offline-safe).
+if command -v npx >/dev/null 2>&1; then
+  if npx --yes tsx -v >/dev/null 2>&1; then
+    npx --yes tsx codex_guardrail.ts --config codex_guardrail.config.json
+  elif npx --yes ts-node -v >/dev/null 2>&1; then
+    npx --yes ts-node codex_guardrail.ts --config codex_guardrail.config.json
+  elif npx tsc -v >/dev/null 2>&1; then
+    tmpdir="$(mktemp -d)"
+    trap 'rm -rf "$tmpdir"' EXIT
+    npx tsc codex_guardrail.ts --target ES2020 --module commonjs --outDir "$tmpdir" >/dev/null
+    node "$tmpdir/codex_guardrail.js" --config codex_guardrail.config.json
+  else
+    echo "ERROR: No TypeScript runtime found (tsx/ts-node/tsc). Install one:"
+    echo "  npm i -D tsx"
+    echo "  # or"
+    echo "  npm i -D ts-node"
+    exit 1
+  fi
+else
+  echo "ERROR: npx not found."
+  exit 1
+fi
+
+echo "Codex Guardrail checks passed."
