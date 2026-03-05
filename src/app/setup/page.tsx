@@ -7,30 +7,62 @@ interface ProvisionResult {
   provisioned: string[];
   already_existed: string[];
   failed: { table: string; error: string }[];
+  processed_count?: number;
+  total_tables?: number;
+  next_offset?: number | null;
+  done?: boolean;
 }
 
 export default function SetupPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ProvisionResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [progressText, setProgressText] = useState<string | null>(null);
 
   async function handleProvision() {
     setLoading(true);
     setError(null);
     setResult(null);
+    setProgressText("Starting provisioning...");
     try {
-      const res = await fetch("/api/setup/provision", {
-        method: "POST",
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => null);
-        throw new Error(data?.error || "Provision failed");
+      let offset = 0;
+      let iterations = 0;
+      const merged: ProvisionResult = { provisioned: [], already_existed: [], failed: [] };
+
+      while (iterations < 20) {
+        const res = await fetch("/api/setup/provision", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ offset, max_tables: 10 }),
+        });
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          throw new Error(data?.error || "Provision failed");
+        }
+
+        const data: ProvisionResult = await res.json();
+        merged.provisioned.push(...(data.provisioned || []));
+        merged.already_existed.push(...(data.already_existed || []));
+        merged.failed.push(...(data.failed || []));
+
+        if (data.total_tables) {
+          const doneCount = merged.provisioned.length + merged.already_existed.length + merged.failed.length;
+          setProgressText(`Provisioning... ${doneCount}/${data.total_tables}`);
+        }
+
+        if (data.done || data.next_offset == null) {
+          break;
+        }
+        offset = data.next_offset;
+        iterations += 1;
       }
-      const data: ProvisionResult = await res.json();
-      setResult(data);
+
+      setResult(merged);
+      setProgressText(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Provision failed");
+      setProgressText(null);
     } finally {
       setLoading(false);
     }
@@ -63,6 +95,10 @@ export default function SetupPage() {
         >
           {loading ? "Provisioning…" : "Provision All Tables"}
         </button>
+
+        {loading && progressText && (
+          <p className="mt-3 text-xs text-muted">{progressText}</p>
+        )}
 
         {error && (
           <div className="mt-4 rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">

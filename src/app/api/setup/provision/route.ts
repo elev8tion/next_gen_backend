@@ -124,12 +124,20 @@ export async function POST(req: NextRequest) {
 
   const authCookies = extractAuthCookies(cookieHeader);
   const origin = req.headers.get("origin") || req.nextUrl.origin;
+  const body = await req.json().catch(() => ({} as Record<string, unknown>));
+  const rawOffset = Number(body.offset ?? 0);
+  const rawMaxTables = Number(body.max_tables ?? 12);
+  const offset = Number.isFinite(rawOffset) ? Math.max(0, Math.floor(rawOffset)) : 0;
+  const maxTables = Number.isFinite(rawMaxTables)
+    ? Math.min(20, Math.max(1, Math.floor(rawMaxTables)))
+    : 12;
+  const tableBatch = TABLES.slice(offset, offset + maxTables);
 
   const provisioned: string[] = [];
   const already_existed: string[] = [];
   const failed: { table: string; error: string }[] = [];
 
-  for (const table of TABLES) {
+  for (const table of tableBatch) {
     const result = await provisionTable(table, authCookies, origin, user.id);
     if (result.status === "provisioned") {
       provisioned.push(table);
@@ -140,5 +148,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ provisioned, already_existed, failed });
+  const nextOffset = offset + tableBatch.length < TABLES.length
+    ? offset + tableBatch.length
+    : null;
+
+  return NextResponse.json({
+    provisioned,
+    already_existed,
+    failed,
+    processed_count: tableBatch.length,
+    total_tables: TABLES.length,
+    next_offset: nextOffset,
+    done: nextOffset === null,
+  });
 }
