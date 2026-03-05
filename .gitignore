@@ -45,3 +45,6 @@ next-env.d.ts
 
 # non-project files
 eng.traineddata
+buildmneeds.txt
+codex_guardrail_pack.zip
+CODEX_ARCHITECTURE_DIRECTIVE./
