@@ -36,23 +36,10 @@ export class RuntimeManifestGenerator {
       }
     }
 
-    // Attach points map: group by entity table
+    // Attach points map: attach points currently do not carry entity scope in
+    // resolved manifests, so publish as global until scoped metadata is added.
     const attachPointsMap: Record<string, AttachPointDef[]> = {};
-    for (const entity of manifest.entities) {
-      const entityAPs = manifest.attach_points.filter((ap) => {
-        // Match attach points that reference this entity by convention
-        // Attach points are global, group by entity table
-        return true;
-      });
-      if (entityAPs.length > 0) {
-        attachPointsMap[entity.table] = entityAPs;
-      }
-    }
-    // If no entity-specific grouping, put all under _global
-    if (
-      Object.keys(attachPointsMap).length === 0 &&
-      manifest.attach_points.length > 0
-    ) {
+    if (manifest.attach_points.length > 0) {
       attachPointsMap["_global"] = manifest.attach_points;
     }
 
