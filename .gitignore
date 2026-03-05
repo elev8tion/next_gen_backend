@@ -48,3 +48,4 @@ eng.traineddata
 buildmneeds.txt
 codex_guardrail_pack.zip
 CODEX_ARCHITECTURE_DIRECTIVE./
+artifacts/

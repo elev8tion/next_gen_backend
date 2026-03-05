@@ -65,8 +65,8 @@
     "src"
   ],
   "determinism_test": {
-    "enabled": false,
-    "command": "npm run build:manifest -- --pack crm.ai_first.v1",
+    "enabled": true,
+    "command": "npm run build:manifest",
     "output_paths": [
       "artifacts/runtime-manifest.json"
     ]

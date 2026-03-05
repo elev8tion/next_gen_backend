@@ -172,6 +172,80 @@ export function generateLocalEmbedding(text: string, dimensions = 1536): {
   };
 }
 
+export interface SemanticEmbeddingResult {
+  base64: string;
+  vector: number[];
+  metadata: Record<string, unknown>;
+  model: string;
+}
+
+async function tryOpenAIEmbedding(
+  text: string,
+  dimensions = 1536
+): Promise<SemanticEmbeddingResult | null> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+
+  const model = process.env.RETRIEVAL_EMBEDDING_MODEL || "text-embedding-3-small";
+  const payload = {
+    model,
+    input: text,
+    dimensions,
+  };
+
+  try {
+    const res = await fetch("https://api.openai.com/v1/embeddings", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) return null;
+
+    const data = (await res.json()) as {
+      data?: Array<{ embedding?: number[] }>;
+      model?: string;
+    };
+    const embedding = data.data?.[0]?.embedding;
+    if (!embedding || !Array.isArray(embedding) || embedding.length === 0) {
+      return null;
+    }
+
+    const vec = new Float32Array(embedding.length);
+    for (let i = 0; i < embedding.length; i++) {
+      vec[i] = Number(embedding[i]) || 0;
+    }
+    normalizeVector(vec);
+
+    return {
+      base64: Buffer.from(vec.buffer).toString("base64"),
+      vector: Array.from(vec),
+      metadata: { provider: "openai", version: "v1" },
+      model: data.model || model,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function generateSemanticEmbedding(
+  text: string,
+  dimensions = 1536
+): Promise<SemanticEmbeddingResult> {
+  const openAi = await tryOpenAIEmbedding(text, dimensions);
+  if (openAi) return openAi;
+
+  const local = generateLocalEmbedding(text, dimensions);
+  return {
+    base64: local.base64,
+    vector: local.vector,
+    metadata: local.metadata,
+    model: "local-hash-embedding-v1",
+  };
+}
+
 /**
  * Cosine similarity between two number[] vectors.
  */
@@ -298,7 +372,7 @@ export async function indexDocument(
     );
 
     // Create deterministic local embedding
-    const embedding = generateLocalEmbedding(chunkContent, embeddingDimensions);
+    const embedding = await generateSemanticEmbedding(chunkContent, embeddingDimensions);
     await ncbFetch(
       "create/knowledge_embeddings",
       authCookies,
@@ -306,7 +380,7 @@ export async function indexDocument(
       "POST",
       {
         chunk_id: chunkRecord.id,
-        model: "local-hash-embedding-v1",
+        model: embedding.model,
         vector: embedding.base64,
         metadata: embedding.metadata,
       }

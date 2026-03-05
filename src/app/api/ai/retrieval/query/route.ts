@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CONFIG, extractAuthCookies, getSessionUser, unwrapNCBArray } from "@/lib/ncb-utils";
 import {
-  generateLocalEmbedding,
+  generateSemanticEmbedding,
   cosineSimilarity,
   decodeBytea,
 } from "@/lib/ai/retrieval";
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const queryEmbedding = generateLocalEmbedding(query_text, 1536);
+  const queryEmbedding = await generateSemanticEmbedding(query_text, 1536);
 
   const docsRaw = await ncbFetch(
     `read/knowledge_documents?collection_id=eq.${collection_id}&status=eq.indexed`,
