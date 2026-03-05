@@ -10,3 +10,4 @@ This checklist is actively maintained during execution.
 - [x] Replace placeholder retrieval embeddings with deterministic local semantic embeddings
 - [x] Improve guardrail blueprint discovery to understand seeded module format and remove false `NO_BLUEPRINTS_FOUND` warnings
 - [x] Re-run validation (`guardrail`, `lint`, `tsc`) and finalize status
+- [x] Add offline-safe retrieval test harness and automate via `npm run test:retrieval`

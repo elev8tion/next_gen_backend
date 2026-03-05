@@ -1,4 +1,4 @@
-import { CONFIG } from "@/lib/ncb-utils";
+import { CONFIG } from "../ncb-utils";
 
 // ---------------------------------------------------------------------------
 // NCB fetch helper (same pattern as rules-executor.ts)
