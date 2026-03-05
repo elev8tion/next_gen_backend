@@ -46,8 +46,7 @@ export async function POST(
 }
 
 export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ canvasId: string }> }
+  req: NextRequest
 ) {
   const user = await getSessionUser(req.headers.get("cookie") || "");
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

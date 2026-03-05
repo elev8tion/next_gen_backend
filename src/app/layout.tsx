@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
 import { NavUser } from "./nav-user";
 import { NavLinks } from "./nav-links";
@@ -31,9 +32,9 @@ export default function RootLayout({
       >
         <nav className="border-b border-card-border bg-card px-6 py-3">
           <div className="mx-auto flex max-w-7xl items-center justify-between">
-            <a href="/" className="text-lg font-semibold tracking-tight">
+            <Link href="/" className="text-lg font-semibold tracking-tight">
               Next Gen Backend
-            </a>
+            </Link>
             <div className="flex items-center gap-6 text-sm">
               <NavLinks />
               <NavUser />

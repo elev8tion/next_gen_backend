@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 
 interface ModuleInfo {
@@ -76,6 +77,7 @@ export default function PackDetail() {
   const [activeTab, setActiveTab] = useState<"sql" | "tables">("sql");
   const [executing, setExecuting] = useState(false);
   const [execResult, setExecResult] = useState<ExecResult | null>(null);
+  const [autoBuildTriggered, setAutoBuildTriggered] = useState(false);
 
   const loadPack = useCallback(() => {
     Promise.all([
@@ -88,17 +90,14 @@ export default function PackDetail() {
         setPack(packData);
         setBuilds(Array.isArray(buildsData) ? buildsData : []);
         setConfigDraft(packData.config || {});
-        if (autoBuild && !packData.error) {
-          runBuild();
-        }
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [packKey, autoBuild]);
+  }, [packKey]);
 
   useEffect(() => { loadPack(); }, [loadPack]);
 
-  async function runBuild() {
+  const runBuild = useCallback(async () => {
     setBuilding(true);
     setBuildPhase("Resolving modules...");
     setBuildResult(null);
@@ -126,7 +125,13 @@ export default function PackDetail() {
       setBuilding(false);
       setBuildPhase(null);
     }
-  }
+  }, [packKey]);
+
+  useEffect(() => {
+    if (!autoBuild || autoBuildTriggered || !pack || buildResult || building) return;
+    setAutoBuildTriggered(true);
+    void runBuild();
+  }, [autoBuild, autoBuildTriggered, pack, buildResult, building, runBuild]);
 
   async function executeSql() {
     if (!buildResult) return;
@@ -304,7 +309,7 @@ export default function PackDetail() {
       <div className="mb-8 flex items-start justify-between">
         <div>
           <div className="flex items-center gap-3">
-            <a href="/" className="text-muted hover:text-foreground text-sm">&larr; Packs</a>
+            <Link href="/" className="text-muted hover:text-foreground text-sm">&larr; Packs</Link>
           </div>
           <h1 className="mt-2 text-2xl font-semibold">{pack.name}</h1>
           <p className="text-xs font-mono text-muted">{pack.pack_key}</p>
@@ -317,12 +322,12 @@ export default function PackDetail() {
           >
             Add Module
           </button>
-          <a
+          <Link
             href={`/packs/${packKey}/schema`}
             className="rounded-md border border-card-border px-4 py-2 text-sm font-medium transition-colors hover:bg-accent/10"
           >
             Schema
-          </a>
+          </Link>
           <button
             onClick={runBuild}
             disabled={building}
@@ -386,12 +391,12 @@ export default function PackDetail() {
               >
                 {executing ? "Executing..." : execResult?.success ? "SQL Executed" : "Execute SQL"}
               </button>
-              <a
+              <Link
                 href={`/packs/${packKey}/builds/${buildResult.build_number}`}
                 className="rounded-md border border-card-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-card"
               >
                 Full Output
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -457,19 +462,19 @@ export default function PackDetail() {
               <div key={layer}>
                 <h3 className="mb-2 text-xs font-medium uppercase tracking-wider text-muted">{layer}</h3>
                 <div className="space-y-2">
-                  {mods.map((m, idx) => (
+                  {mods.map((m) => (
                     <div
                       key={m.module_key}
                       className={`rounded-md border px-4 py-3 ${LAYER_COLORS[layer] || "border-card-border bg-card"}`}
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <a
+                          <Link
                             href={`/modules/${m.module_key}`}
                             className="text-sm font-medium hover:underline"
                           >
                             {m.name}
-                          </a>
+                          </Link>
                           <span className="ml-2 text-xs font-mono text-muted/70">{m.module_key}</span>
                         </div>
                         <div className="flex items-center gap-1">

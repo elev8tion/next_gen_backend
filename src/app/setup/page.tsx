@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 interface ProvisionResult {
   provisioned: string[];
@@ -139,9 +140,9 @@ export default function SetupPage() {
       </div>
 
       <div className="mt-6">
-        <a href="/" className="text-sm text-accent hover:underline">
+        <Link href="/" className="text-sm text-accent hover:underline">
           &larr; Back to Dashboard
-        </a>
+        </Link>
       </div>
     </div>
   );

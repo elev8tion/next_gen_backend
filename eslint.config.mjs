@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Repository tooling script (kept intentionally permissive)
+    "codex_guardrail.ts",
   ]),
 ]);
 

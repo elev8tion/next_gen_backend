@@ -26,17 +26,8 @@ export async function POST(
 
     // Get next build number
     const authCookies = extractAuthCookies(cookieHeader);
-    const buildsUrl = `${CONFIG.dataApiUrl}/read/pack_builds?Instance=${CONFIG.instance}&pack_id=eq.${artifact.pack_key}&order=build_number.desc&limit=1`;
-
     let nextBuildNumber = 1;
     try {
-      const buildsRes = await fetch(buildsUrl.replace(`pack_id=eq.${artifact.pack_key}`, `sql_migration=neq.''`), {
-        headers: {
-          "Content-Type": "application/json",
-          "X-Database-Instance": CONFIG.instance,
-          Cookie: authCookies,
-        },
-      });
       // Try to get pack_id from loader - we need the actual pack record
       const packUrl = `${CONFIG.dataApiUrl}/read/blueprint_packs?Instance=${CONFIG.instance}&pack_key=eq.${packKey}`;
       const packRes = await fetch(packUrl, {

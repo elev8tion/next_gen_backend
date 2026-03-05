@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 
 interface FieldDef {
@@ -264,7 +265,7 @@ export default function ModuleAuthoringPage() {
       {/* Header */}
       <div className="mb-6 flex items-start justify-between">
         <div>
-          <a href="/modules" className="text-sm text-muted hover:text-foreground">&larr; Modules</a>
+          <Link href="/modules" className="text-sm text-muted hover:text-foreground">&larr; Modules</Link>
           <h1 className="mt-2 text-2xl font-semibold">{blueprint.module.name || moduleKey}</h1>
           <div className="mt-1 flex items-center gap-3">
             <span className="text-xs font-mono text-muted">{moduleKey}</span>

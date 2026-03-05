@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
   useNodesState,
@@ -27,7 +28,7 @@ interface VersionData {
 }
 
 export default function CanvasEditor() {
-  const { projectId, canvasId } = useParams<{ projectId: string; canvasId: string }>();
+  const { canvasId } = useParams<{ projectId: string; canvasId: string }>();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -244,7 +245,7 @@ export default function CanvasEditor() {
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-card-border bg-card">
         <div className="flex items-center gap-3">
-          <a href="/composer" className="text-xs text-muted hover:text-foreground">&larr; Projects</a>
+          <Link href="/composer" className="text-xs text-muted hover:text-foreground">&larr; Projects</Link>
           <span className="text-xs text-muted">Canvas</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-muted">

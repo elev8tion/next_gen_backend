@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 interface Project {
@@ -73,7 +74,7 @@ export default function ComposerDashboard() {
           <h1 className="text-2xl font-semibold tracking-tight">Visual Composer</h1>
           <p className="mt-1 text-sm text-muted">
             Drag-and-drop blueprint composition with live validation.
-            {" "}Already have a blueprint pack? <a href="/" className="text-accent hover:underline">Use Blueprint Packs</a> for one-click build and deploy.
+            {" "}Already have a blueprint pack? <Link href="/" className="text-accent hover:underline">Use Blueprint Packs</Link> for one-click build and deploy.
           </p>
         </div>
         <button
@@ -136,12 +137,12 @@ export default function ComposerDashboard() {
               {p.description && <p className="mt-1 text-sm text-muted">{p.description}</p>}
               <p className="mt-2 text-xs text-muted">{new Date(p.created_at).toLocaleDateString()}</p>
               <div className="mt-4 flex gap-2">
-                <a
+                <Link
                   href={`/composer/${p.id}`}
                   className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent-hover"
                 >
                   Open
-                </a>
+                </Link>
                 <button
                   onClick={() => handleDelete(p.id)}
                   className="rounded-md border border-danger/30 px-3 py-1.5 text-xs text-danger hover:bg-danger/10"

@@ -1,4 +1,4 @@
-import type { BlueprintModule, EntityDef, EventDef, FieldDef } from "./types";
+import type { BlueprintModule, FieldDef } from "./types";
 
 export interface BlueprintValidationResult {
   ok: boolean;

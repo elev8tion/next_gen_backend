@@ -1,4 +1,4 @@
-import { CONFIG, extractAuthCookies, unwrapNCBArray } from "@/lib/ncb-utils";
+import { CONFIG, unwrapNCBArray } from "@/lib/ncb-utils";
 import { evaluateCondition } from "./json-logic";
 
 // ── Types ──

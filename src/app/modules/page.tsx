@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 
 interface Module {
   id: string;
@@ -28,7 +27,6 @@ const LAYER_STYLES: Record<string, string> = {
 };
 
 export default function ModuleBrowser() {
-  const router = useRouter();
   const [modules, setModules] = useState<Module[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

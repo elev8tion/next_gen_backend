@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 interface Pack {
@@ -32,7 +33,7 @@ export default function Dashboard() {
   const [createForm, setCreateForm] = useState({ pack_key: "", name: "", description: "" });
   const [creating, setCreating] = useState(false);
 
-  function loadPacks() {
+  const loadPacks = useCallback(() => {
     setLoading(true);
     fetch("/api/generator/packs", { credentials: "include" })
       .then(async (res) => {
@@ -46,9 +47,9 @@ export default function Dashboard() {
       .then((data) => { if (data) setPacks(data); })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }
+  }, [router]);
 
-  useEffect(() => { loadPacks(); }, [router]);
+  useEffect(() => { loadPacks(); }, [loadPacks]);
 
   async function handleSeed() {
     setSeeding(true);
@@ -246,9 +247,9 @@ export default function Dashboard() {
               <p className="mt-1 text-xs text-muted">
                 Drag-and-drop canvas for assembling custom module combinations.
               </p>
-              <a href="/composer" className="mt-2 inline-block text-xs font-medium text-accent hover:underline">
+              <Link href="/composer" className="mt-2 inline-block text-xs font-medium text-accent hover:underline">
                 Open Visual Composer &rarr;
-              </a>
+              </Link>
             </div>
           </div>
 
@@ -300,18 +301,18 @@ function PackGrid({ packs, seeded }: { packs: Pack[]; seeded?: boolean }) {
               {pack.module_count} {seeded ? "pre-configured " : ""}module{pack.module_count !== 1 ? "s" : ""}
             </span>
             <div className="flex gap-2">
-              <a
+              <Link
                 href={`/packs/${pack.pack_key}`}
                 className="rounded-md bg-card border border-card-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-accent/10 hover:border-accent/30"
               >
                 View
-              </a>
-              <a
+              </Link>
+              <Link
                 href={`/packs/${pack.pack_key}?build=true`}
                 className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-accent-hover"
               >
                 Build
-              </a>
+              </Link>
             </div>
           </div>
         </div>
